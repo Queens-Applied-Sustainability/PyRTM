@@ -1,15 +1,9 @@
-"""
-Set up some basic info for SMARTS
+"""Set up some basic info for SMARTS
+
 blah blah more about smarts
-
-
 """
 
 from os import path, getcwd
-
-global EWD
-global EXECUTABLE
-
 
 VERSION = (2, 9, 5, 'final')
 WORKING_DIR = 'exe'
@@ -28,5 +22,3 @@ OUTPUT_FILE_SMOOTHED = '.'.join([OUTPUT_FILE, 'scn', 'txt'])
 
 WD = getcwd()
 EWD = path.join(WD, WORKING_DIR)
-
-import smarts.go
