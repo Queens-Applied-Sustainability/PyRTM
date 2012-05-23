@@ -28,3 +28,6 @@ pip-log.txt
 
 #Text Editor Backups
 *~
+
+#Mac OS Garbage Files
+.DS_Store
