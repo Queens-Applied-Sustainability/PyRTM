@@ -2,8 +2,20 @@
 class FortranNamelist(dict):
     """Dict that returns a Fortran Namelist when stringified.
     
-    There's an initial header thing which has a purpose, but this class
-    just accepts one, passed as a constructor. KISS.
+    Integers, floats, strings, and 1-dimensional arrays (lists or tupples, or,
+    more accurately, any non-string itterable) should work as expected.
+    
+    This class currently can only handle one NAMELIST block for the file,
+    despite the NAMELIST specification's ability to handle multiple blocks. Its
+    name must be passed to the constructor.
+    
+    Use instances of this class like any other dict to hold stuff, and then just
+    cast the object to a string to get the Fortran NAMELIST version out.
+    
+    This code works with a Fortran script that I compiled with gfortran. I
+    could not find the actual fortran specifications for NAMELIST formatting
+    anywhere, so your mileage may varry. If you know of these specs, please
+    contact me -- uniphil@gmail.com.
     """
     entry_delimiter = ',\n '
     def __init__(self, block):
@@ -28,6 +40,9 @@ class FortranNamelist(dict):
 
 
 class group_property(property):
+    """
+    Crazy magical python
+    """
     def __get__(self, obj, objtype=None):
         return super(group_property, self).__get__(obj.config, objtype)
 
@@ -39,6 +54,14 @@ class group_property(property):
 
 
 def config_meta(classname, parents, attrs):
+    """
+    Make this class do cool stuff.
+    
+    Adapted from suggestions I recieved on StackOverflow, see
+    http://stackoverflow.com/a/10746986/1299695.
+    
+    Still not perfect; working on it.
+    """
     defaults = {}
     groups = {}
     newattrs = {'defaults':defaults, 'groups':groups}
