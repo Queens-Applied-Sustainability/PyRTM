@@ -66,16 +66,17 @@ class SBDART(object):
         infile = open(path.join(WORKING_DIR, INPUT_FILE), 'w')
         infile.write(str(self.configuration))
         infile.close()
-        print('wrote input file:')
-        print(self.configuration)
     
     def go(self):
+        print('Writing NAMELIST input file...')
         self.writeNamelistFile();
         # run sbdart
+        print('Creating SBDART subprocess...')
         import subprocess
         exe = path.join(WORKING_DIR, EXECUTABLE) + ' > ' +\
             path.join(WORKING_DIR, OUTPUT_FILE)
         sbthread = subprocess.Popen(exe, shell=True, cwd=WORKING_DIR)
+        print('Lookin\' good.')
         # clean up
         #if self.cleanup:
         #    remove(path.join(WORKING_DIR, INPUT_FILE))

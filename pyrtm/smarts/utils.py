@@ -1,4 +1,7 @@
-'Example_6:USSA_AOD=0.084'		  !Card 1 Comment
+
+class SmartsCards(dict):
+    def __repr__(self):
+        return """'Example_6:USSA_AOD=0.084'		  !Card 1 Comment
 1			!Card 2 ISPR
 1013.25 0. 0.		!Card 2a Pressure, altitude, height
 1			!Card 3 IATMOS
@@ -26,3 +29,4 @@
 0			!Card 16 IUV
 2			!Card 17 IMASS
 1.5			!Card 17a Air mass
+"""

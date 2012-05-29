@@ -1,18 +1,38 @@
 from pyrtm.config import Config
 from pyrtm.sbdart.wrapper import SBDART
-#from pyrtm.smarts.wrapper import SMARTS
+from pyrtm.smarts.wrapper import SMARTS
 #from pyrtm.rrtm.wrapper import RRTM
 
+#The RTM applications to use:
+wrappers = [SBDART, SMARTS]#, RRTM]
+
+print('\n\
+  ----------------------------------------- \n\
+ |   PYRTM: Radiative Transfer Modelling   |\n\
+ |-----------------------------------------|\n\
+ | By the Queen\'s University Applied Sus-  |\n\
+ | tainability Research Group.             |\n\
+ |                                         |\n\
+ | Running RMT Modelling scripts:          |\n\
+ | %s '                                   '|\n\
+  -----------------------------------------\n' %
+ ", ".join(wrapper.name for wrapper in wrappers).ljust(39)
+ )
+
+print(' Setting up\n'
+      ' ----------')
 
 print('Loading configuration...')
 # TODO update config with input settings
 config = Config()#conf=updatesblahblah)
 
 print('Setting up RTM wrappers...')
-rtms = [rtm(config) for rtm in [SBDART]]#, SMARTS, RRMT]]
+rtms = [rtm(config) for rtm in wrappers]#, RRMT]]
 
 for rtm in rtms:
-    print('Running %s...' % rtm.name)
+    print('\n Running %s\n' % rtm.name +
+            ' --------%s' % ('-' * len(rtm.name)))
     rtm.go()   
 
+print('\nDone.\n')
 
