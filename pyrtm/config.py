@@ -48,10 +48,3 @@ class Config(Conf):
         albedo_feature = 'vegetation'
         altitude = 0.11 #km
 
-
-    def register(self, rtm):
-        try:
-            self.rtms.append(rtm(config=self))
-        except AttributeError:
-            self.rtms = [rtm(config=self)]
-
