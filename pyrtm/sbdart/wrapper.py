@@ -66,7 +66,8 @@ class SBDART(object):
         infile = open(path.join(WORKING_DIR, INPUT_FILE), 'w')
         infile.write(str(self.configuration))
         infile.close()
-        print('wrote input file.')
+        print('wrote input file:')
+        print(self.configuration)
     
     def go(self):
         self.writeNamelistFile();
@@ -76,10 +77,10 @@ class SBDART(object):
             path.join(WORKING_DIR, OUTPUT_FILE)
         sbthread = subprocess.Popen(exe, shell=True, cwd=WORKING_DIR)
         # clean up
-        if self.cleanup:
-            remove(path.join(WORKING_DIR, INPUT_FILE))
+        #if self.cleanup:
+        #    remove(path.join(WORKING_DIR, INPUT_FILE))
     
     def __repr__(self):
-        return "Fortran controller. Configuration:\n" + str(self.configuration)
+        return "Fortran controller. Configuration: %s" % self.configuration
 
 
