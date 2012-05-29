@@ -11,7 +11,7 @@ if __name__ == '__main__':
    
 from pyrtm.utils import instantiator
 from pyrtm.smarts.config import WORKING_DIR, EXECUTABLE, INPUT_FILE, OUTPUT_FILE
-from pyrtm.smarts.utils import SmartsCards
+from pyrtm.smarts.utils import Card, cards
         
 @instantiator
 class translate(object):
@@ -22,7 +22,7 @@ class translate(object):
                   'sub-arctic winter': 'SAW',
                   'us62': 'USSA'}
                   
-    aerosols - {'rural': 'S&F_RURAL',
+    aerosols = {'rural': 'S&F_RURAL',
                 'urban': 'S&F_URBAN',
                 'maritime': 'S&F_MARIT',
                 'tripospheric': 'S&F_TROPO',
@@ -45,7 +45,7 @@ class SMARTS(object):
     Control the SMARTS stuff
     """
     name = 'SMARTS'
-    configuration = SmartsCards()
+    configuration = cards
     
     def __init__(self, config=None, cleanup=True):
         super(SMARTS, self).__init__()

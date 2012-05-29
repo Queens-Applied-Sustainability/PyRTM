@@ -1,8 +1,20 @@
+class Card(dict):
+    def __init__(self, *args, **kwargs):
+        self.vals = list(args[1:])
+    def __str__(self):
+        return "\n%s" % " ".join([str(val) for val in self.vals])
 
-class SmartsCards(dict):
-    array_delimiter = " " # can be a space or a comma
+cards = Card(
+    Card(1, "Some stupid SMARTS comment"),
+    Card(2, 0,
+        Card('2a', 1)),
+    Card(3, 1,
+        Card('3a', 'SAS')),
+    Card(4, 0,
+        Card('4a', 1)),
+)
     
-    """
+"""
     mandatory fields:
     
     1 COMNT - comment - 64 char truncate
@@ -73,8 +85,8 @@ class SmartsCards(dict):
         
     """
     
-    def __str__(self):
-        return """'Example_6:USSA_AOD=0.084'		  !Card 1 Comment
+    
+"""'Example_6:USSA_AOD=0.084'		  !Card 1 Comment
 1			!Card 2 ISPR
 1013.25 0. 0.		!Card 2a Pressure, altitude, height
 1			!Card 3 IATMOS
@@ -103,6 +115,3 @@ class SmartsCards(dict):
 2			!Card 17 IMASS
 1.5			!Card 17a Air mass
 """
-    
-    def __repr__(self):
-        return super(SmartCards, self).__repr__()
