@@ -47,9 +47,9 @@ The use of any code and/or executable residing in any of the `exe` and `src`
 folders is subject to the licenses of their respective projects. You MUST accept
 (and in some cases register) with their owners before using.
 
- * [http://arm.mrcsb.com/sbdart/](SBDART)
- * [http://www.nrel.gov/rredc/smarts/](SMARTS)
- * [http://rtweb.aer.com/rrtm_frame.html](RRTM)
+ * [SBDART](http://arm.mrcsb.com/sbdart/)
+ * [SMARTS](http://www.nrel.gov/rredc/smarts/)
+ * [RRTM](http://rtweb.aer.com/rrtm_frame.html)
 
 Licenses for those softwares are included in some cases in this repository only
 for convenience and quick reference. The licenses on the above linked pages
@@ -57,7 +57,8 @@ always takes precedence.
 
 ###pyrtm Python Modules
 
-Python code developed for the
-[http://www.appropedia.org/Category:Queens_Applied_Sustainability_Group](Queen's
-University Applied Sustainability Research Group) is released under the
-[http://www.gnu.org/licenses/gpl.html](GNU General Public License v3).
+Python code developed for the [Queen's University Applied Sustainability
+Research Group]
+(http://www.appropedia.org/Category:Queens_Applied_Sustainability_Group) is
+released under the [GNU General Public License v3]
+(http://www.gnu.org/licenses/gpl.html).
