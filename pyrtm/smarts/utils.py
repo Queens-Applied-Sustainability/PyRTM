@@ -1,18 +1,44 @@
 class Card(dict):
     def __init__(self, *args, **kwargs):
-        self.vals = list(args[1:])
+        self.vals = [arg for arg in args[1:]]
+        
     def __str__(self):
-        return "\n%s" % " ".join([str(val) for val in self.vals])
+        return "\n%s" % " ".join(["'%s'" % val if isinstance(val, str)
+                                            else str(val) for val in self.vals])
 
-cards = Card(
-    Card(1, "Some stupid SMARTS comment"),
-    Card(2, 0,
-        Card('2a', 1)),
+cards = Card('I\'m a cardholder!',
+    Card(1, 'Some stupid SMARTS comment'),
+    Card(2, 1,
+        Card('2a', 1013.25, 0, 0)),
     Card(3, 1,
         Card('3a', 'SAS')),
-    Card(4, 0,
-        Card('4a', 1)),
+    Card(4, 1),
+    Card(5, 1),
+    Card(6, 1),
+    Card(7, 370,
+        Card('7a', 1)),
+    Card(8, 'S&F_RURAL'),
+    Card(9, 0,
+        Card('9a', 0.084)),
+    Card(10, 38,
+        Card('10b', 1,
+            Card('10c', 38, 37, 180))),
+    Card(11, 280, 4000, 1.0, 1367.0),
+    Card(12, 2,
+        Card('12a', 280, 4000, .5,
+            Card('12b', 4,
+                Card('12c', 8, 9, 10, 30)))),
+    Card(13, 1,
+        Card('13a', 0, 2.9, 0)),
+    Card(14, 0),
+    Card(15, 0),
+    Card(16, 0),
+    Card(17, 2,
+        Card('17a', 1.5))
 )
+
+
+
     
 """
     mandatory fields:
