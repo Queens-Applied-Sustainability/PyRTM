@@ -5,15 +5,13 @@ Inputs.
 Blah blah.
 """
 
-from os import path, remove
 import os
 import shutil
 import time
-from pyrtm.utils import FortranNamelist, instantiator, popenAndCall
 import pyrtm.utils as utils
 from pyrtm.sbdart.config import WORKING_DIR, EXECUTABLE, INPUT_FILE, OUTPUT_FILE
 
-@instantiator
+@utils.instantiator
 class translate(object):
     output = {'none': 0,
               'per wavelength': 1}
@@ -46,7 +44,7 @@ class SBDART(object):
     """Control the SBDART stuff
     """
     name = 'SBDART'
-    configuration = FortranNamelist('INPUT')
+    configuration = utils.FortranNamelist('INPUT')
     
     def __init__(self, config=None, cleanup=True):
         super(SBDART, self).__init__()
@@ -71,7 +69,7 @@ class SBDART(object):
             self.output = config.output
                 
     def writeNamelistFile(self):
-        infile = open(path.join(WORKING_DIR, INPUT_FILE), 'w')
+        infile = open(os.path.join(WORKING_DIR, INPUT_FILE), 'w')
         infile.write(str(self.configuration))
         infile.close()
     
@@ -97,13 +95,10 @@ class SBDART(object):
         self.writeNamelistFile();
         # run sbdart
         log('Creating subprocess...')
-        exe = path.join(WORKING_DIR, EXECUTABLE) + ' > ' +\
-            path.join(WORKING_DIR, OUTPUT_FILE)
-        popenAndCall(self.postExec, exe, shell=True, cwd=WORKING_DIR)
+        exe = os.path.join(WORKING_DIR, EXECUTABLE) + ' > ' +\
+              os.path.join(WORKING_DIR, OUTPUT_FILE)
+        utils.popenAndCall(self.postExec, exe, shell=True, cwd=WORKING_DIR)
         log('running...')
-        # clean up
-        #if self.cleanup:
-        #    remove(path.join(WORKING_DIR, INPUT_FILE))
     
     def __repr__(self):
         return "Fortran controller. Configuration: %s" % self.configuration

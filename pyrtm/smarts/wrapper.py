@@ -1,7 +1,6 @@
 """
 Python wrapper for the SMARTS RTM.
 """
-from os import path, remove
 import time
 import os
 import shutil
@@ -13,14 +12,13 @@ if __name__ == '__main__':
     from os import chdir
     chdir("../../")
    
-from pyrtm.utils import instantiator, popenAndCall
 from pyrtm.smarts.config import WORKING_DIR, EXECUTABLE, INPUT_FILE, OUTPUT_FILE
 from pyrtm.smarts.utils import Card, cards
 
 brander = utils.PrintBrander('SMARTS')
 log = brander.write
 
-@instantiator
+@utils.instantiator
 class translate(object):
     atmosphere = {'tropical': 'TRL',
                   'mid-latitude summer': 'MLS',
@@ -86,7 +84,7 @@ class SMARTS(object):
         #'ISALB': translate.surface[config.surface.albedo_feature],
                 
     def writeCards(self):
-        infile = open(path.join(WORKING_DIR, INPUT_FILE), 'w')
+        infile = open(os.path.join(WORKING_DIR, INPUT_FILE), 'w')
         infile.write(str(self.configuration))
         infile.close()
     
@@ -112,8 +110,8 @@ class SMARTS(object):
         # run sbdart
         log('Creating subprocess...')
         import subprocess
-        exe = path.join(WORKING_DIR, EXECUTABLE)
-        popenAndCall(self.postExec, 'echo Y | %s > log.txt' % exe,
+        exe = os.path.join(WORKING_DIR, EXECUTABLE)
+        utils.popenAndCall(self.postExec, 'echo Y | %s > log.txt' % exe,
                                             shell=True, cwd=WORKING_DIR)
         log('running.')
     
