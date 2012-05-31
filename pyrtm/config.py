@@ -4,7 +4,8 @@ class Config(Conf):
     __metaclass__ = config_meta
     
     description = 'hello world'
-    output = 'per wavelength'
+    output = 'default'
+    output_type = 'per wavelength'
     
     day_of_year = 103
     time = 18.8333 # GMT decimal hours
