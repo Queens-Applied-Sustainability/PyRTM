@@ -1,3 +1,6 @@
+import threading
+import subprocess
+
 
 class FortranNamelist(dict):
     """Dict that returns a Fortran Namelist when stringified.
@@ -25,6 +28,7 @@ class FortranNamelist(dict):
     def __str__(self):
         from collections import Iterable
         out = '$' + self.header + '\n '
+        #FIXME break the generator out into a loop. this is nuts.
         out += self.entry_delimiter.join(
             '%s = %s' % (key,
                 value if not isinstance(value, Iterable) or
@@ -90,3 +94,27 @@ class Conf(object):
 
 def instantiator(cls):
     return cls()
+    
+
+def underline(string):
+    return '\n %s\n %s' % (string, '-'*len(string))
+
+
+def popenAndCall(onExit, *popenArgs, **popenKWArgs):
+    """
+    Runs the given args in a subprocess.Popen, and then calls the function
+    onExit when the subprocess completes.
+    onExit is a callable object, and popenArgs is a list/tuple of args that 
+    would give to subprocess.Popen.
+    """
+    def runInThread(onExit, popenArgs, popenKWArgs):
+        proc = subprocess.Popen(*popenArgs, **popenKWArgs)
+        proc.wait()
+        onExit()
+        return
+    thread = threading.Thread(target=runInThread, args=(onExit, popenArgs, popenKWArgs))
+    thread.start()
+    # returns immediately after the thread starts
+    return thread
+
+
