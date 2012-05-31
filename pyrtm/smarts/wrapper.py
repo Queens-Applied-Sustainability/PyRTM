@@ -5,6 +5,7 @@ from os import path, remove
 import time
 import os
 import shutil
+import pyrtm.utils as utils
 
 if __name__ == '__main__':
     import sys
@@ -15,7 +16,10 @@ if __name__ == '__main__':
 from pyrtm.utils import instantiator, popenAndCall
 from pyrtm.smarts.config import WORKING_DIR, EXECUTABLE, INPUT_FILE, OUTPUT_FILE
 from pyrtm.smarts.utils import Card, cards
-        
+
+brander = utils.PrintBrander('SMARTS')
+log = brander.write
+
 @instantiator
 class translate(object):
     atmosphere = {'tropical': 'TRL',
@@ -87,7 +91,7 @@ class SMARTS(object):
         infile.close()
     
     def postExec(self):
-        print("SMARTS: Cleaning up...")
+        log("Cleaning up...")
         output_dir = os.path.join(os.getcwd(), 'data',
                                             'output', self.output, 'SMARTS')
         if not os.path.exists(output_dir):
@@ -99,22 +103,22 @@ class SMARTS(object):
                   'smarts295.out.txt']:
             shutil.move(os.path.join(exe_dir, f), os.path.join(output_dir, f))
         tt = time.time() - self.t0
-        print("SMARTS: Done (%s) in %f s.\n" % (self.output, tt))
+        log("Done (%s) in %f s.\n" % (self.output, tt))
     
     def go(self):
         self.t0 = time.time()
-        print('SMARTS: Writing input cards...')
+        log('Writing input cards...')
         self.writeCards();
         # run sbdart
-        print('SMARTS: Creating subprocess...')
+        log('Creating subprocess...')
         import subprocess
         exe = path.join(WORKING_DIR, EXECUTABLE)
         popenAndCall(self.postExec, 'echo Y | %s > log.txt' % exe,
                                             shell=True, cwd=WORKING_DIR)
-        print('SMARTS: running.')
+        log('running.')
     
     def __repr__(self):
-        return "SMARTS controller. Configuration: %s" % self.configuration
+        return "controller. Configuration: %s" % self.configuration
 
 
 def test_smarts():

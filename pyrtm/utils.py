@@ -87,9 +87,11 @@ def config_meta(classname, parents, attrs):
     return type(classname, parents, newattrs)
 
 
-class Conf(object):
-    def __repr__(self):
-        return str(self.__dict__)
+class Conf(dict):
+    __getattr__ = dict.__getitem__
+    __setattr__ = dict.__setitem__
+    #def __repr__(self):
+    #    return str(self.__dict__)
 
 
 def instantiator(cls):
@@ -98,6 +100,13 @@ def instantiator(cls):
 
 def underline(string):
     return '\n %s\n %s' % (string, '-'*len(string))
+
+
+class PrintBrander(object):
+    def __init__(self, brand):
+        self.brand = brand
+    def write(self, message):
+        print("%s: %s" % (self.brand, message))
 
 
 def popenAndCall(onExit, *popenArgs, **popenKWArgs):

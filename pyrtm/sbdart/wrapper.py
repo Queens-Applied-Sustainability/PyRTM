@@ -10,6 +10,7 @@ import os
 import shutil
 import time
 from pyrtm.utils import FortranNamelist, instantiator, popenAndCall
+import pyrtm.utils as utils
 from pyrtm.sbdart.config import WORKING_DIR, EXECUTABLE, INPUT_FILE, OUTPUT_FILE
 
 @instantiator
@@ -37,6 +38,9 @@ class translate(object):
                 'aged volcanic': 2,
                 'fresh volcanic': 3,
                 'meteor dust': 4}
+
+brander = utils.PrintBrander('SBDART')
+log = brander.write
 
 class SBDART(object):
     """Control the SBDART stuff
@@ -72,7 +76,7 @@ class SBDART(object):
         infile.close()
     
     def postExec(self):
-        print("SBDART: Cleaning up...")
+        log("Cleaning up...")
         output_dir = os.path.join(os.getcwd(), 'data',
                                             'output', self.output, 'SBDART')
         if not os.path.exists(output_dir):
@@ -83,26 +87,20 @@ class SBDART(object):
                 shutil.move(os.path.join(exe_dir, f),
                             os.path.join(output_dir, f))
             except IOError:
-                print('SBDART: not moving file \'%s\'' % f)
+                log('not moving file \'%s\'' % f)
         tt = time.time() - self.t0
-        print("SBDART: Done (%s) in %f s.\n" % (self.output, tt))
+        log("Done (%s) in %f s.\n" % (self.output, tt))
     
     def go(self):
         self.t0 = time.time()
-        print('Writing NAMELIST input file...')
+        log('Writing NAMELIST input file...')
         self.writeNamelistFile();
         # run sbdart
-        print('Creating SBDART subprocess...')
-        """
-        import subprocess
-        exe = path.join(WORKING_DIR, EXECUTABLE) + ' > ' +\
-            path.join(WORKING_DIR, OUTPUT_FILE)
-        sbthread = subprocess.Popen(exe, shell=True, cwd=WORKING_DIR)
-        """
+        log('Creating subprocess...')
         exe = path.join(WORKING_DIR, EXECUTABLE) + ' > ' +\
             path.join(WORKING_DIR, OUTPUT_FILE)
         popenAndCall(self.postExec, exe, shell=True, cwd=WORKING_DIR)
-        print('SBDART running...')
+        log('running...')
         # clean up
         #if self.cleanup:
         #    remove(path.join(WORKING_DIR, INPUT_FILE))
