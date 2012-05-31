@@ -1,4 +1,5 @@
 from pyrtm.config import Config
+from pyrtm.utils import underline
 from pyrtm.sbdart.wrapper import SBDART
 from pyrtm.smarts.wrapper import SMARTS
 #from pyrtm.rrtm.wrapper import RRTM
@@ -19,20 +20,18 @@ print('\n\
  ", ".join(wrapper.name for wrapper in wrappers).ljust(39)
  )
 
-print(' Setting up\n'
-      ' ----------')
+print(underline('Setting up'))
 
 print('Loading configuration...')
 # TODO update config with input settings
 config = Config()#conf=updatesblahblah)
-
 print('Setting up RTM wrappers...')
 rtms = [rtm(config) for rtm in wrappers]#, RRMT]]
 
 for rtm in rtms:
-    print('\n Running %s\n' % rtm.name +
-            ' --------%s' % ('-' * len(rtm.name)))
+    print(underline('Running %s' % rtm.name))
     rtm.go()   
 
-print('\nDone.\n')
+print
+#print(underline('Done.'))
 
