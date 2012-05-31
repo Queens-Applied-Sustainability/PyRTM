@@ -20,14 +20,17 @@ pip-log.txt
 .coverage
 .tox
 
-#Translations
+# Translations
 *.mo
 
-#Mr Developer
+# Mr Developer
 .mr.developer.cfg
 
-#Text Editor Backups
+# Text Editor Backups
 *~
 
-#Mac OS Garbage Files
+# Mac OS Garbage Files
 .DS_Store
+
+# I/O Files
+data/*
