@@ -1,16 +1,38 @@
-import threading
-import subprocess
-
-
-class FortranNamelist(dict):
-    """Dict that returns a Fortran Namelist when stringified.
+"""
+    Copyright (c) 2012 Philip Schliehauf (uniphil@gmail.com) and the
+    Queen's University Applied Sustainability Centre
     
-    Integers, floats, strings, and 1-dimensional arrays (lists or tupples, or,
-    more accurately, any non-string itterable) should work as expected.
+    This project is hosted on github; for up-to-date code and contacts:
+    https://github.com/Queens-Applied-Sustainability/PyRTM
     
-    This class currently can only handle one NAMELIST block for the file,
-    despite the NAMELIST specification's ability to handle multiple blocks. Its
-    name must be passed to the constructor.
+    This file is part of PyRTM.
+
+    PyRTM is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    PyRTM is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with PyRTM.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+import re
+from collections import Iterable
+
+class Namelist(dict):
+    """Dict that returns a formatted Fortran Namelist when stringified.
+    
+    Integers, floats, strings, and 1-dimensional arrays (lists or tupples, or
+    any non-string Iterable) should work as expected.
+    
+    Only one NAMELIST block is supported, which makes sense in this
+    implementation since we're subclassing dict and using the dict's keys/values
+    to write the namelist. The block name must be passed to the constructor.
     
     Use instances of this class like any other dict to hold stuff, and then just
     cast the object to a string to get the Fortran NAMELIST version out.
@@ -20,93 +42,53 @@ class FortranNamelist(dict):
     anywhere, so your mileage may varry. If you know of these specs, please
     contact me -- uniphil@gmail.com.
     """
-    entry_delimiter = ',\n '
-    def __init__(self, block):
-        super(FortranNamelist, self).__init__()
-        self.header = block
     
-    def __str__(self):
-        from collections import Iterable
-        out = '$' + self.header + '\n '
-        #FIXME break the generator out into a loop. this is nuts.
-        out += self.entry_delimiter.join(
-            '%s = %s' % (key,
-                value if not isinstance(value, Iterable) or
-                    isinstance(value, str)
-                else ', '.join(map(str, value)))
-            for key, value in self.items()
-        )
-        out += '\n$END'
-        return out
+    def __init__(self, block, *args, **kwargs):
+        super(Namelist, self).__init__(*args, **kwargs)
+        self._check_fortran_var_name(block)
+        self.header = block
     
     def __repr__(self):
         return 'Fortran Namelist dict thing - ' + self.header
-
-
-class group_property(property):
-    """
-    Crazy magical python
-    """
-    def __get__(self, obj, objtype=None):
-        return super(group_property, self).__get__(obj.config, objtype)
-
-    def __set__(self, obj, value):
-        super(group_property, self).__set__(obj.config, value)
-
-    def __delete__(self, obj):
-        return super(group_property, self).__del__(obj.config)
-
-
-def config_meta(classname, parents, attrs):
-    """
-    Make this class do cool stuff.
     
-    Adapted from suggestions I recieved on StackOverflow, see
-    http://stackoverflow.com/a/10746986/1299695.
+    def __str__(self):
+        out = '$%s\n' % self.header
+        fvals = (" %s = %s" %
+                    (key, self.fval(val)) for key, val in self.items())
+        out += ',\n'.join(fvals)
+        out += '%s$END' % ('\n' if bool(self.items()) else '')
+        return out
     
-    Still not perfect; working on it.
-    """
-    defaults = {}
-    groups = {}
-    newattrs = {'defaults':defaults, 'groups':groups}
-    for name, value in attrs.items():
-        if name.startswith('__'):
-            newattrs[name] = value
-        elif isinstance(value, type):
-            groups[name] = value
+    def fval(self, val, first_level=True):
+        """
+        Return a variable stringified in a fortran-readable mannor
+        """
+        if isinstance(val, str): # strings are treated 'specially'.
+            return "'%s'" % val
+        elif isinstance(val, Iterable):
+            return ", ".join(self.fval(v, False) for v in val)
         else:
-            defaults[name] = value
-    def init(self):
-        for name, value in defaults.items():
-            self.__dict__[name] = value
-        for name, value in groups.items():
-            group = value()
-            group.config = self
-            self.__dict__[name] = group
-    newattrs['__init__'] = init
-    return type(classname, parents, newattrs)
-
-
-class Conf(dict):
-    __getattr__ = dict.__getitem__
-    __setattr__ = dict.__setitem__
-    #def __repr__(self):
-    #    return str(self.__dict__)
-
-
-def instantiator(cls):
-    return cls()
+            return str(val)
     
-
-def underline(string):
-    return '\n %s\n %s' % (string, '-'*len(string))
-
-
-class PrintBrander(object):
-    def __init__(self, brand):
-        self.brand = brand
-    def write(self, message):
-        print("%s: %s" % (self.brand, message))
+    def update(self, newstuff):
+        "Validate the values going in"
+        for key, val in newstuff.items():
+            if (not bool(val)) and (not val==0) and (not isinstance(val, str)):
+                raise self.NoValueError("No empty values allowed.")
+            if isinstance(val, Iterable) and not isinstance(val, str):
+                raise self.ArrayError("Only 1-dimensional arrays allowed.")
+            self._check_fortran_var_name(key)
+        super(Namelist, self).update(newstuff)
+    
+    def _check_fortran_var_name(self, key):
+        if not isinstance(key, str):
+            raise self.VarError("Fortran variable name must be a string.")
+        if re.match("^[a-zA-Z][a-zA-Z0-9]+$", key) is None:
+            raise self.VarError("Invalid fortran variable name.")
+            
+    class NoValueError(Exception): pass
+    class VarError(Exception): pass
+    class ArrayError(Exception): pass
 
 
 def popenAndCall(onExit, *popenArgs, **popenKWArgs):
@@ -121,9 +103,58 @@ def popenAndCall(onExit, *popenArgs, **popenKWArgs):
         proc.wait()
         onExit()
         return
-    thread = threading.Thread(target=runInThread, args=(onExit, popenArgs, popenKWArgs))
+    thread = threading.Thread(target=runInThread,
+                              args=(onExit, popenArgs, popenKWArgs))
     thread.start()
-    # returns immediately after the thread starts
-    return thread
+    return thread # returns immediately after the thread starts
+
+
+def underline(string, strong=False):
+    "Trivial utility to format emphasized output."
+    return '\n %s\n %s' % (string, ('=' if strong else '-')*len(str(string)))
+
+
+def print_brander(brand):
+    """
+    Simple utility to 'brand' print statments according to who calls them.
+    
+    The brand is the stringified version of whatever is passed to the closure.
+    If nothing or an empyt/None value is passed in, it will not brand the output
+    and behave just like a regular print.
+    """
+    def printer(anything):
+        bstring = "%s: " % brand if bool(brand) or brand == 0 else ""
+        print("%s%s" % (bstring, anything))
+    return printer
+
+def instantiator(cls):
+    "Returns an instantiation of the class, intended for use as a decorator"
+    return cls()
+
+
+class EachList(list):
+    """
+    A list who behaves like her elements.
+    
+    You can access the list items' attributes by asking for the attribute from
+    the list. You can call the list items' methods by calling that method on the
+    list itself. You'll always get an eachList back whose elements are the
+    result of whatever operation you just performed.
+    """
+        
+    def __getattr__(self, attr):
+        return EachList([getattr(thing, attr) for thing in self])
+    
+    def __setattr__(self, attr, val):
+        return EachList([setattr(thing, attr, val) for thing in self])
+
+    def __call__(self, *args, **kwargs):
+        return EachList([thing(*args, **kwargs) for thing in self])
+    
+    def __delattr__(self, attr):
+        for thing in self:
+            delattr(thing, attr)
+    
+
 
 
