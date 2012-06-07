@@ -7,7 +7,7 @@ dist
 build
 eggs
 parts
-bin
+#bin # Am I using bin for the wrong thing?!
 var
 sdist
 develop-eggs
