@@ -23,41 +23,7 @@
 
 import abc
 import utils
-
-
-class RTMConfig(dict):
-    # TODO: implement white-list key checking
-    # TODO: implement value validation
-    pass
-
-
-default_config = RTMConfig({
-    # set up intelligible defaults
-    'description': 'hello world',
-    
-    'day of year': 103,
-    'time': 18.333, # GMT decimal hours
-    'latitude': 44,
-    'longitude': 283.7,
-    
-    'spectrum selector': 'lowtran 7',
-    'filter function type': 0, # FIXME what does this mean (SBDART)
-    'resolution': 0, # FIXME sbdart
-    'lower limit': 0.25,
-    'upper limit': 2.5,
-    
-    'zenith angle': 0,
-    
-    'atmosphere': 'mid-latitude summer',
-    'aerosols': 'background stratospheric',
-    'aerosol optical depth': 0.084, # FIXME units?
-    
-    'cloud altitude': [0, 0, 0, 0, 0], # FIXME ...
-    'cloud optical depth': [0, 0, 0, 0, 0],
-    
-    'surface albedo type': 'vegetation',
-    'surface elevation': 0.11, # km
-})
+import settings
 
 
 class _RTM(object):
@@ -71,7 +37,7 @@ class _RTM(object):
     output_file = None
     
     def __init__(self, initconfig=None):
-        self.config = RTMConfig(default_config)
+        self.config = utils.RTMConfig(settings.default_config)
         if initconfig:
             self.config.update(initconfig)
     
@@ -95,12 +61,40 @@ class SMARTS(_RTM):
     executable = 'smarts295'
     input_file = 'smarts295.inp.txt'
     output_files = ['smarts295.out.txt']
+    
+    def write_input_file(self):
+        return # FIXME
+    def run_rtm(self):
+        return # FIXME
 
 
 class SBdart(_RTM):
     executable = 'drtx'
     input_file = 'INPUT'
     output_files = ['OUTPUT']
+    
+    _translate = settings.translate('SBdart') # returns a dict
+    
+    def write_input_file(self):
+        rtm_vars = {
+            'ALAT': self.config['latitude'],
+            'ALON': self.config['longitude'],
+            'IDAY': self.config['day of year'],
+            'TIME': self.config['time'],
+            #'IOUT': self._translate['output'][self.config['output type']],
+            'wlinf': self.config['lower limit'],
+            'wlsup': self.config['upper limit'],
+            'wlinc': self.config['resolution'],
+            'ISALB': self._translate['surface'][self.config['surface albedo']],
+            'ZPRES': self.config['surface elevation'],
+            'IDATM': self._translate['atmosphere'][self.config['atmosphere']],
+            'Zcloud': self.config['cloud altitude'],
+            'Tcloud': self.config['cloud optical depth'],
+            'JAER': self._translate['aerosols'][self.config['aerosols']],
+        }
+        
+    def run_rtm(self):
+        return # FIXME
 
 
 def All(*args, **kwargs):

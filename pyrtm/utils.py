@@ -157,4 +157,10 @@ class EachList(list):
     
 
 
+class RTMConfig(dict):
+    # TODO: implement white-list key checking
+    # TODO: implement value validation
+    pass
+
+
 
