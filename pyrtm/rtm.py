@@ -59,17 +59,20 @@ class _RTM(object):
         #t0c = time.time()
         self.config.update(newconfig)
         self.setup_working_dir()
-        self.write_input_file()
+        self._write_input_file(self.rtm_vars)
         #t0e = time.time()
+        self.log("Running...")
+        t0 = time.time()
         result = self.run_rtm()
+        tf = time.time()
+        self.log("Done in %3fs." % (tf-t0))
         #tf = time.time()
         #self.log("Times since init, call, exec: %s" %
         #            ", ".join("%2fs" % (tf-t)  for t in (self.t0i, t0c, t0e)))
         self.clean_up()
         return result
     
-    @abc.abstractmethod
-    def write_input_file(self, rtm_vars):
+    def _write_input_file(self, rtm_vars):
         #rtm_vars = None
         try:
             in_file = open(os.path.join(self.working_dir, self.input_file), 'w')
@@ -78,16 +81,20 @@ class _RTM(object):
         in_file.write(str(rtm_vars))
         in_file.close()
     
+    @property
     @abc.abstractmethod
-    def run_rtm(self):
-        return
+    def rtm_vars(self): pass
+    
+    @abc.abstractmethod
+    def run_rtm(self): return
     
     def setup_working_dir(self):
         self.working_dir = tempfile.mkdtemp(suffix=self.name)
         # symbolically link to the executable and resources
+        self.log("Linking: ", no_break=True)
         for resource in [self.executable] + self.resources:
             try:
-                self.log("linking in '%s'" % resource)
+                self.log("%s" % resource, plain=True, no_break=True)
                 os.symlink(os.path.join(self.my_dir, self.bin_path, resource),
                            os.path.join(self.working_dir, resource))
             except OSError:
@@ -96,6 +103,7 @@ class _RTM(object):
                                            "Maybe in a future version I'll "\
                                            "be SMARTS enough to fall back to "\
                                            "something sensible...")
+        self.log(plain=True)
     
     def clean_up(self):
         try:
@@ -106,7 +114,7 @@ class _RTM(object):
             self.log("Can't remove the directory. Does it exist? Do we have "\
                      "permission?")
         else:
-            self.log("Successfully cleaned up temporaries")
+            self.log("Successfully cleaned up temporary files.")
     
     class FileSystemError(Exception): pass
 
@@ -134,8 +142,8 @@ class SBdart(_RTM):
     
     _translate = settings.translate('SBdart') # returns a dict
     
-    def write_input_file(self):
-        rtm_vars = utils.Namelist('INPUT', {
+    def rtm_vars(self):
+        return utils.Namelist('INPUT', {
             'ALAT': self.config['latitude'],
             'ALON': self.config['longitude'],
             'IDAY': self.config['day of year'],
@@ -151,10 +159,6 @@ class SBdart(_RTM):
             'Tcloud': self.config['cloud optical depth'],
             'JAER': self._translate['aerosols'][self.config['aerosols']],
         })
-        super(SBdart, self).write_input_file(rtm_vars)
-    
-    def blah(self):
-        print "blah"
         
     def run_rtm(self):
         exe = '%s > %s' % (os.path.join(self.working_dir, self.executable),

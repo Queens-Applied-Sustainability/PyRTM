@@ -121,9 +121,13 @@ def print_brander(brand):
     If nothing or an empyt/None value is passed in, it will not brand the output
     and behave just like a regular print.
     """
-    def printer(anything):
+    def printer(anything='', plain=False, no_break=False):
         bstring = "%s: " % brand if bool(brand) or brand == 0 else ""
-        print("%s%s" % (bstring, anything))
+        branded = anything if plain else "%s%s" % (bstring, anything)
+        if not no_break:
+            print(branded)
+        else:
+            print branded,
     return printer
 
 def instantiator(cls):
