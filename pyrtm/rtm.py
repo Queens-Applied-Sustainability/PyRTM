@@ -54,8 +54,8 @@ class _RTM(object):
             self.config.update(initconfig)
     
     def __call__(self, newconfig={}):
-        self.setup_working_dir()
         self.config.update(newconfig)
+        self.setup_working_dir()
         self.write_input_file()
         result = self.run_rtm()
         self.clean_up()
@@ -70,33 +70,6 @@ class _RTM(object):
         returns
     
     def setup_working_dir(self):
-        """
-        working = os.path.join('/tmp/pyrtm', self.name) # FIXME FIXME FIXME
-        try: # use /tmp
-            self.log("trying to create /tmp...")
-            os.makedirs(working)
-        except OSError: # can't create /tmp!
-            if os.path.exists(working):
-                self.log("Whoa! Working directory colission?! I'm going to "\
-                         "be rude and erase everything to use it myself.")
-                try:
-                    shutil.rmtree(working)
-                except OSError:
-                    raise self.FileSystemError("Sorry, I just can't run "\
-                                               "these conditions!")
-                else:
-                    try:
-                        os.makedirs(working)
-                    except:
-                        raise self.FileSystemError("oh give me a break. is "\
-                                                   "this case necessary?!")
-            else:
-                raise self.FileSystemError("Oops -- you don't have a /tmp "\
-                                           "directory on your computer and "\
-                                           "I'm not smart enough to figure "\
-                                           "out another place to use instead.")
-        self.working_dir = working
-        """
         self.working_dir = tempfile.mkdtemp(suffix=self.name)
         # symbolically link to the executable and resources
         for resource in [self.executable] + self.resources:
