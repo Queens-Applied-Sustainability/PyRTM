@@ -25,6 +25,7 @@ import abc
 import os
 import shutil
 import tempfile
+import time
 
 import utils
 import settings
@@ -46,6 +47,7 @@ class _RTM(object):
     my_dir = '/home/phil/rtm/PyRTM' # FIXME FIXME FIXME FIXME
     
     def __init__(self, initconfig=None):
+        #self.t0i = time.time()
         self.log = utils.print_brander(self.name)
         self.log("Loading default configuration.")
         self.config = utils.RTMConfig(settings.default_config)
@@ -54,20 +56,31 @@ class _RTM(object):
             self.config.update(initconfig)
     
     def __call__(self, newconfig={}):
+        #t0c = time.time()
         self.config.update(newconfig)
         self.setup_working_dir()
         self.write_input_file()
+        #t0e = time.time()
         result = self.run_rtm()
+        #tf = time.time()
+        #self.log("Times since init, call, exec: %s" %
+        #            ", ".join("%2fs" % (tf-t)  for t in (self.t0i, t0c, t0e)))
         self.clean_up()
         return result
     
     @abc.abstractmethod
-    def write_input_file(self):
-        return
+    def write_input_file(self, rtm_vars):
+        #rtm_vars = None
+        try:
+            in_file = open(os.path.join(self.working_dir, self.input_file), 'w')
+        except:
+            raise self.FileSystemError("Couldn't open input file for writing")
+        in_file.write(str(rtm_vars))
+        in_file.close()
     
     @abc.abstractmethod
     def run_rtm(self):
-        returns
+        return
     
     def setup_working_dir(self):
         self.working_dir = tempfile.mkdtemp(suffix=self.name)
@@ -138,9 +151,7 @@ class SBdart(_RTM):
             'Tcloud': self.config['cloud optical depth'],
             'JAER': self._translate['aerosols'][self.config['aerosols']],
         })
-        in_file = open(os.path.join(self.working_dir, self.input_file), 'w')
-        in_file.write(str(rtm_vars))
-        in_file.close()
+        super(SBdart, self).write_input_file(rtm_vars)
     
     def blah(self):
         print "blah"
