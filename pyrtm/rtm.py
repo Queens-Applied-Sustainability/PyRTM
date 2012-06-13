@@ -26,6 +26,10 @@ import os
 import shutil
 import tempfile
 import time
+import threading
+import subprocess
+import re
+import csv
 
 import utils
 import settings
@@ -47,7 +51,6 @@ class _RTM(object):
     my_dir = '/home/phil/rtm/PyRTM' # FIXME FIXME FIXME FIXME
     
     def __init__(self, initconfig=None):
-        #self.t0i = time.time()
         self.log = utils.print_brander(self.name)
         self.log("Loading default configuration.")
         self.config = utils.RTMConfig(settings.default_config)
@@ -56,30 +59,26 @@ class _RTM(object):
             self.config.update(initconfig)
     
     def __call__(self, newconfig={}):
-        #t0c = time.time()
         self.config.update(newconfig)
         self.setup_working_dir()
         self._write_input_file(self.rtm_vars)
-        #t0e = time.time()
         self.log("Running...")
         t0 = time.time()
-        result = self.run_rtm()
+        self.run_rtm()
         tf = time.time()
-        self.log("Done in %3fs." % (tf-t0))
-        #tf = time.time()
-        #self.log("Times since init, call, exec: %s" %
-        #            ", ".join("%2fs" % (tf-t)  for t in (self.t0i, t0c, t0e)))
+        self.log("Done in %#.3gs." % (tf-t0))
+        result = self.read_output()
         self.clean_up()
         return result
     
     def _write_input_file(self, rtm_vars):
-        #rtm_vars = None
+        
         try:
-            in_file = open(os.path.join(self.working_dir, self.input_file), 'w')
+            infile = open(os.path.join(self.working_dir, self.input_file), 'w')
         except:
             raise self.FileSystemError("Couldn't open input file for writing")
-        in_file.write(str(rtm_vars))
-        in_file.close()
+        infile.write(str(rtm_vars))
+        infile.close()
     
     @property
     @abc.abstractmethod
@@ -89,9 +88,10 @@ class _RTM(object):
     def run_rtm(self): return
     
     def setup_working_dir(self):
+
         self.working_dir = tempfile.mkdtemp(suffix=self.name)
         # symbolically link to the executable and resources
-        self.log("Linking: ", no_break=True)
+        self.log("Linking", no_break=True)
         for resource in [self.executable] + self.resources:
             try:
                 self.log("%s" % resource, plain=True, no_break=True)
@@ -99,20 +99,20 @@ class _RTM(object):
                            os.path.join(self.working_dir, resource))
             except OSError:
                 raise self.FileSystemError("Huh. Can't make some symlinks "\
-                                           "that I need in order to work. "\
-                                           "Maybe in a future version I'll "\
-                                           "be SMARTS enough to fall back to "\
-                                           "something sensible...")
-        self.log(plain=True)
+                    "that I need in order to work. Maybe in a future version "\
+                    "I'll be SMARTS enough to fall back to something...")
+        self.log(plain=True) # just a new line
+    
+    @abc.abstractmethod
+    def read_output(self): pass
     
     def clean_up(self):
         try:
-            shutil.rmtree(self.working_dir)
+            pass#shutil.rmtree(self.working_dir)
         except NameError:
             self.log("Nothing to clean -- was it ever created?")
         except OSError:
-            self.log("Can't remove the directory. Does it exist? Do we have "\
-                     "permission?")
+            self.log("Can't remove the directory. Does it exist? Permission?")
         else:
             self.log("Successfully cleaned up temporary files.")
     
@@ -127,11 +127,8 @@ class SMARTS(_RTM):
     input_file = 'smarts295.inp.txt'
     output_file = 'smarts295.out.txt'
     
-    def write_input_file(self):
-        return # FIXME
-    def run_rtm(self):
-        return # FIXME
-
+    def run_rtm(self): pass # FIXME
+    def read_output(self): pass # FIXME
 
 class SBdart(_RTM):
     name = 'SBdart'
@@ -142,13 +139,14 @@ class SBdart(_RTM):
     
     _translate = settings.translate('SBdart') # returns a dict
     
+    @property
     def rtm_vars(self):
         return utils.Namelist('INPUT', {
             'ALAT': self.config['latitude'],
             'ALON': self.config['longitude'],
             'IDAY': self.config['day of year'],
             'TIME': self.config['time'],
-            #'IOUT': self._translate['output'][self.config['output']], #FIXME
+            'IOUT': self._translate['output']['per wavelength'],
             'wlinf': self.config['lower limit'],
             'wlsup': self.config['upper limit'],
             'wlinc': self.config['resolution'],
@@ -161,9 +159,34 @@ class SBdart(_RTM):
         })
         
     def run_rtm(self):
-        exe = '%s > %s' % (os.path.join(self.working_dir, self.executable),
-                           os.path.join(self.working_dir, self.output_file))
-        #utils.popenAndCall(self.blah, exe, shell=True, cwd=self.exe_path)
+        exe = './%s > %s' % (self.executable, self.output_file)
+        self.log("exec command: %s" % exe)
+        p = subprocess.Popen(exe, shell=True, cwd=self.working_dir)
+        p.wait()
+        return
+    
+    def read_output(self):
+        files = os.listdir(self.working_dir)
+        for warning in (w for w in files if re.match(r'^SBDART_WARNING.', w)):
+            try:
+                warn_file = open(os.path.join(self.working_dir, warning), 'r')
+            except IOError:
+                self.log(warning)
+            else:
+                self.log(warn_file.readline(), no_break=True) #line has a break
+                warn_file.close()
+        try:
+            raw_output = open(os.path.join(self.working_dir, self.output_file))
+        except IOError:
+            raise self.FileSystemError("Can't open the raw output file.")
+        
+        for i in range(3):
+            # skip the first couple garbage lines in the output
+            next(raw_output)
+            
+        output = csv.reader(raw_output, delimiter=' ')
+        return [float(entry[6]) for entry in output]    #FIXME not really the right data...
+        
 
 
 def All(*args, **kwargs):
