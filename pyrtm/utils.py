@@ -22,6 +22,8 @@
 """
 
 import re
+import threading
+import subprocess
 from collections import Iterable
 
 class Namelist(dict):
@@ -49,9 +51,6 @@ class Namelist(dict):
         self.header = block
     
     def __repr__(self):
-        return 'Fortran Namelist dict thing - ' + self.header
-    
-    def __str__(self):
         out = '$%s\n' % self.header
         fvals = (" %s = %s" %
                     (key, self.fval(val)) for key, val in self.items())

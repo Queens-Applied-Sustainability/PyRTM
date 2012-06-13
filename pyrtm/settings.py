@@ -53,43 +53,74 @@ default_config = utils.RTMConfig({
     'surface elevation': 0.11, # km
 })
 
+
+_translation = {}
+    
+_translation['SBdart'] = {
+    'output': {
+        'none': 0,
+        'per wavelength': 1,
+     },
+    'surface': {
+        'snow': 1,
+        'clear water': 2,
+        'lake water': 3,
+        'sea water': 4,
+        'sand': 5,
+        'vegetation': 6,
+        'ocean water': 7
+     },
+    'atmosphere': {
+        'tropical': 1,
+        'mid-latitude summer': 2,
+        'mid-latitude winter': 3,
+        'sub-arctic summer': 4,
+        'sub-arctic winter': 5,
+        'us62': 6
+    },
+    'aerosols': {
+        'no aerosol': 0,
+        'background stratospheric': 1,
+        'aged volcanic': 2,
+        'fresh volcanic': 3,
+        'meteor dust': 4
+    },
+}
+
+_translation['SMARTS'] = {
+    'atmosphere': {
+        'tropical': 'TRL',
+        'mid-latitude summer': 'MLS',
+        'mid-latitude winter': 'MLW',
+        'sub-arctic summer': 'SAS',
+        'sub-arctic winter': 'SAW',
+        'us62': 'USSA',
+    },
+    'aerosols': {
+        'rural': 'S&F_RURAL',
+        'urban': 'S&F_URBAN',
+        'maritime': 'S&F_MARIT',
+        'tripospheric': 'S&F_TROPO',
+        
+        'continental': 'SRA_CONTL',
+        'urban': 'SRA_URBAN',
+        'maritime': 'SRA_MARIT',
+        
+        'Braslau & Dave C': 'B&D_C',
+        'Braslau & Dave C1': 'B&D_c1',
+        
+        'desert': 'DESERT_MIN',
+        'crazy desert': 'DESERT_MAX',
+        
+        'custom': 'USER',
+        
+        # FIXME ...
+        'background stratospheric': 'B&D_C',
+    },
+}
+
 def translate(rtm):
-    return {
-        'SBdart': {
-            'output': {
-                'none': 0,
-                'per wavelength': 1,
-             },
-            'surface': {
-                'snow': 1,
-                'clear water': 2,
-                'lake water': 3,
-                'sea water': 4,
-                'sand': 5,
-                'vegetation': 6,
-                'ocean water': 7
-             },
-            'atmosphere': {
-                'tropical': 1,
-                'mid-latitude summer': 2,
-                'mid-latitude winter': 3,
-                'sub-arctic summer': 4,
-                'sub-arctic winter': 5,
-                'us62': 6
-            },
-            'aerosols': {
-                'no aerosol': 0,
-                'background stratospheric': 1,
-                'aged volcanic': 2,
-                'fresh volcanic': 3,
-                'meteor dust': 4
-            },
-        },
-        'SMARTS': {
-        },
-        'RRTM': {
-        },
-    }.get(rtm)
+    return _translation.get(rtm)
 
 
 
