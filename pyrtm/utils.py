@@ -21,10 +21,29 @@
     along with PyRTM.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+import abc
 import re
-import threading
 import subprocess
+import threading
+
 from collections import Iterable
+
+
+def smarts_cards(sconf):
+    """ BLAH BLAH BLHA """
+    
+    annoying = {'content': ''}
+    def card_print(something, no_break=False):
+        annoying['content'] += str(something)
+        if not no_break:
+            annoying['content'] += '\n'
+    
+    # CARD 1
+    card_print(sconf.get('COMNT', 'Hello_world'))
+    
+    return annoying['content']
+    
+
 
 class Namelist(dict):
     """Dict that returns a formatted Fortran Namelist when stringified.
@@ -110,7 +129,7 @@ def popenAndCall(onExit, *popenArgs, **popenKWArgs):
 
 def underline(string, strong=False):
     "Trivial utility to format emphasized output."
-    return '\n %s\n %s' % (string, ('=' if strong else '-')*len(str(string)))
+    return '\n %s\n %s' % (string, ('=' if strong else '-') * len(str(string)))
 
 
 def print_brander(brand):
@@ -131,7 +150,12 @@ def print_brander(brand):
     return printer
 
 def instantiator(cls):
-    "Returns an instantiation of the class, intended for use as a decorator"
+    """
+    Returns an instantiation of the class.
+    
+    This is intended for use as a decorator.
+    The returned object will have the same name as the class it was passed.
+    """
     return cls()
 
 
@@ -158,12 +182,24 @@ class EachList(list):
         for thing in self:
             delattr(thing, attr)
     
+    #def __getitem__(self, each_slice): #FIXME FIXME FIXME
+    #    return EachList([list.__getitem__(thing, each_slice) for thing in self])
+    
 
 
 class RTMConfig(dict):
     # TODO: implement white-list key checking
     # TODO: implement value validation
     pass
+
+
+class _Translation(object):
+    "Base class for translations"
+    def __call__(self, foreign):
+        native = {}
+        for key, val in foreign.iteritems():
+            native.update(getattr(self, key)(val))
+        return native
 
 
 

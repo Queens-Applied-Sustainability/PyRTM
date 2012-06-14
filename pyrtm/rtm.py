@@ -22,14 +22,14 @@
 """
 
 import abc
-import os
-import shutil
-import tempfile
-import time
-import threading
-import subprocess
-import re
 import csv
+import os
+import re
+import shutil
+import subprocess
+import tempfile
+import threading
+import time
 
 import utils
 import settings
@@ -123,12 +123,23 @@ class SMARTS(_RTM):
     name = 'SMARTS'
     bin_path = os.path.join('bin', 'smarts')
     executable = 'smarts295'
-    resources = ['Albedo', 'CIE_data', 'Gasses', 'Solar']
+    resources = ['Albedo', 'CIE_data', 'Gases', 'Solar']
     input_file = 'smarts295.inp.txt'
     output_file = 'smarts295.out.txt'
+    output_extra = ['log.txt', 'smarts295.ext.txt']
     
-    def run_rtm(self): pass # FIXME
+    @property
+    def rtm_vars(self):
+        return utils.smarts_cards(settings.translate_smarts(self.config))
+    
+    def run_rtm(self):
+        exe = './%s > log.txt' % self.executable
+        self.log("exec command: %s" % exe)
+        p = subprocess.Popen(exe, shell=True, cwd=self.working_dir)
+        p.wait()
+        return
     def read_output(self): pass # FIXME
+
 
 class SBdart(_RTM):
     name = 'SBdart'
@@ -137,26 +148,9 @@ class SBdart(_RTM):
     input_file = 'INPUT'
     output_file = 'OUTPUT'
     
-    _translate = settings.translate('SBdart') # returns a dict
-    
     @property
     def rtm_vars(self):
-        return utils.Namelist('INPUT', {
-            'ALAT': self.config['latitude'],
-            'ALON': self.config['longitude'],
-            'IDAY': self.config['day of year'],
-            'TIME': self.config['time'],
-            'IOUT': self._translate['output']['per wavelength'],
-            'wlinf': self.config['lower limit'],
-            'wlsup': self.config['upper limit'],
-            'wlinc': self.config['resolution'],
-            'ISALB': self._translate['surface'][self.config['surface albedo']],
-            'ZPRES': self.config['surface elevation'],
-            'IDATM': self._translate['atmosphere'][self.config['atmosphere']],
-            'Zcloud': self.config['cloud altitude'],
-            'Tcloud': self.config['cloud optical depth'],
-            'JAER': self._translate['aerosols'][self.config['aerosols']],
-        })
+        return utils.Namelist('INPUT', settings.translate_sbdart(self.config))
         
     def run_rtm(self):
         exe = './%s > %s' % (self.executable, self.output_file)
