@@ -33,15 +33,129 @@ def smarts_cards(sconf):
     """ BLAH BLAH BLHA """
     
     annoying = {'content': ''}
-    def card_print(something, no_break=False):
+    def card_print(something, comment=None, no_break=False):
         annoying['content'] += str(something)
+        if comment:
+            annoying['content'] += ' \t! %s' % comment
         if not no_break:
             annoying['content'] += '\n'
     
     # CARD 1
-    card_print(sconf.get('COMNT', 'Hello_world'))
+    card_print(sconf.get('COMNT', 'Hello_world'), '1 COMNT')
     
+    # CARD 2
+    card_print(1, '2 ISPR mode select')
+    card_print('0.0003, 0, 0.1') # FIXME don't hard-code
+    
+    # CARD 3
+    card_print(0, '3 IATMOS mode select')
+    card_print('-44, 50, SUMMER, -44') # FIXME don't hard-code some
+    
+    # Card 4
+    card_print(2, '4 IH2O mode select')
+    
+    # Card 5
+    card_print(1, '5 IO3 mode select') # use default ozone FIXME
+    
+    # Card 6
+    card_print(1, '6 IGAS') # use defaults	
+    
+    # Card 7
+    card_print('390, 0, 1', '7 qCO2 ppm') # FIXME
+    card_print(0)
+    """
+    # Card 8
+    card_print('USER', '8 AEROS')
+    card_print('1, 1, 0.8, 0.7') # FIXME don't hard-code
+    
+    # Card 9
+    card_print(1, '9 ITURB')
+    card_print(1) # FIXME Horray iterated value?!
+    "" "
+    # Card 10
+    card_print(5, '10 IALBDX')
+    card_print(0)
+    
+    # Card 11
+    card_print('280, 4000, 1, 1367', '11 blergh')
+    "" "
+    # Card 12
+    card_print(2, '12 IPRT')
+    card_print('280, 4000, 2')
+    card_print('5')
+    card_print('2')
+    card_print('3')
+    card_print('4')
+    card_print('5')
+    card_print('11')
+    
+    # Card 13
+    card_print(0, '13 ICIRC')
+    
+    # Card 14
+    card_print(0, '14 ISCAN')
+    
+    # Card 15
+    card_print(0, '15 ILLUM')
+    
+    # Card 16
+    card_print(0, '16 IUV')
+    
+    # Card 17
+    card_print(3, '17 IMASS')
+    card_print('2012, 6, 14, 12, 44, -73, -5')
+    
+    """
     return annoying['content']
+    
+    """
+    
+    2 -> mode 1 site pressure 
+    2a (we input), altitude, height=0
+    
+    3 -> mode 0
+    3a TAIR(const), RH, SEASON(calculate by day), TDAY(calculate)
+    
+    4 -> mode 2
+    
+    5 -> mode 1 (will use ussa)
+    
+    6 -> mode 1 (const for now, could play with proximity to cities)
+    
+    7 -> 390 (or whatever is current)
+    7a-> mode 0 (NEW!!!)
+    
+    8 -> USER
+    8a ALPHA1, ALPHA2, OMEGL, GG (const or switched by rural/urban/marine)
+    
+    9 -> mode 1
+    9a BETA (what we iterate)
+    
+    10 -> 3-66 choose an albedo based on month
+    10b -> 0 ITILT
+    
+    11 -> WLMN and WLMX 280 - ... (match sbdart), SUNCOR SOLARC -> 1(ignored based on 17), 1367
+    
+    12 -> 2 IPRT (separate spectral and variable results files)
+    12a -> (match spectral range to sbdart/11), match interval to sbdart
+    12b -> 16 (number of variables for 12c)
+    12c -> 2-5,11,15-20,27-31
+    
+    13 -> mode 0 ICIRC
+    
+    14 -> mode 0 ISCAN
+    
+    15 -> 0 ILLUM
+    
+    16 -> 0 IUV
+    
+    17 -> mode 3 IMASS
+    17a -> ...
+    
+    
+    
+    """
+    
     
 
 

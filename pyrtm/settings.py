@@ -40,6 +40,7 @@ default_config = utils.RTMConfig({
     
     #'precipitable water': 0.5,
     #'ozone': 0.324,
+    #'altitude'
     #'tropospheric nitrogen': '???',
     #'surface pressure': '???',
     
@@ -93,7 +94,8 @@ class translate_sbdart(utils._Translation):
     cloud_altitude = lambda self, val: {'ZCLOUD': val} # FIXME?
     cloud_optical_depth = lambda self, val: {'TCLOUD': val} # FIXME?
     
-    aersosols = lambda self, val: {'JAER': self._aerosols.get(val)}
+    #aersosols = lambda self, val: {'JAER': self._aerosols.get(val)}
+    # TBAER is what we are itterating, with either rural or urban
     
     output = lambda self, val: {'IOUT': self._outputs.get(val)}
     lower_limit = lambda self, val: {'WLINF': val}
@@ -137,7 +139,7 @@ class translate_smarts(utils._Translation):
         return {'MONTH': month, 'DAY': day}
     time = lambda self, val: {'HOUR': val}
     
-    atmosphere = lambda self, val: {'IATMOS': self._atmospheres.get(val)}
+    atmosphere = lambda self, val: {'ATMOS': self._atmospheres.get(val)}
     
     aerosols = lambda self, val: {'AEROS': self._aerosols.get(val)}
     
