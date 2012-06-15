@@ -25,7 +25,7 @@
 import utils
 
 
-default_config = utils.RTMConfig({
+default_config = {
     'description': 'Hello World -- Default Config',
 
     'day_of_year': 103,
@@ -44,7 +44,7 @@ default_config = utils.RTMConfig({
     #'tropospheric nitrogen': '???',
     #'surface pressure': '???',
     
-})
+}
 
 """
 later -- stratsopheric (smog) [???; not much effect on spectrum -- maybe based on proximity to city]

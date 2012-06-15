@@ -3,13 +3,15 @@ from pyrtm import rtm, utils
 def donecallback(results):
     print results[0]
 
-print utils.underline("Test 1: a single run of SBdart", strong=True)
-sbdart = rtm.SBdart(run="Test 1")
-sbdart(donecallback)
+config = utils.RTMConfig({'description': 'Test 1'})
 
-print utils.underline("Test 2: single run of SMARTS", strong=True)
-smarts = rtm.SMARTS(run="Test 2")
-smarts(donecallback)
+print utils.underline("Test 1: A single run of SBdart", strong=True)
+sbdart = rtm.SBdart(config)
+sbdart.go(donecallback)
+
+print utils.underline("Test 2: A single run of SMARTS", strong=True)
+smarts = rtm.SMARTS(config)
+smarts.go(donecallback)
 
 """
 print utils.underline("Test 3: ALL THE rtms", strong=True)

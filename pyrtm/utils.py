@@ -28,6 +28,7 @@ import threading
 
 from collections import Iterable
 
+import settings
 
 def smarts_cards(self, sconf):
     """
@@ -327,7 +328,9 @@ class EachList(list):
 class RTMConfig(dict):
     # TODO: implement white-list key checking
     # TODO: implement value validation
-    pass
+    def __init__(self, *args, **kwargs):
+        self.update(settings.default_config)
+        super(RTMConfig, self).__init__(*args, **kwargs)
 
 
 class _Translation(object):

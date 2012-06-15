@@ -22,6 +22,7 @@
 """
 
 import abc
+import numpy
 import os
 import re
 import shutil
@@ -30,53 +31,42 @@ import tempfile
 import threading
 import time
 
-import numpy
-
-import utils
 import settings
+import utils
 
 
-class _RTM(object):
+class _RTM(dict):
     """
     Abstract class describing interactions with RTM applications.
     """
     __metaclass__ = abc.ABCMeta
     
-    name = None
-    executable = None
-    bin_path = None
-    resources = []
-    input_file = None
-    input_translator = None
-    input_generator = None
-    output_file = None
-    output_extra = []
-    output_headers = None
-    exe = None
-    my_dir = '/home/phil/rtm/PyRTM' # FIXME FIXME FIXME FIXME
+    name = None         # How shall I identify myself?
+    executable = None   # What is my executable called?
+    bin_path = None     # What is the path to my binary folder?
+    resources = []      # What other important items are in my binary folder?
+    input_file = None   # What is the name of the file I read for input?
+    input_translator = None # Who can I call to get the config in my language?
+    input_generator = None  # Who can format the config into something I read?
+    output_file = None  # To where shall/do I write my output?
+    output_extra = []   # What other extra files do I write?
+    output_headers = None   # How many garbage lines to I produce?
+    exe = None          # What command makes me go?
+    my_dir = '/home/phil/rtm/PyRTM' # FIXME FIXME FIXME FIXME ugly ugly ugly
+    clean_after = True  # Shall I erase the temporary directory I created?
     
-    def __init__(self, initconfig=None, run=None):
-        if run:
-            self.name += " " + run
-        self.log = utils.print_brander(self.name)
+    def __init__(self, *args, **kwargs):
+        """
+        Create default configuration and set up logger.
+        
+        Accepts configuration parameters passed as a dictionary.
+        """
+        super(_RTM, self).__init__(*args, **kwargs)
         self.result = None
-        self.config = utils.RTMConfig(settings.default_config)
-        if initconfig:
-            self.log("Applying initial configuration.")
-            self.config.update(initconfig)
-    
-    def __call__(self, callback=None, newconfig={}):
-        self.callback = callback
-        self.config.update(newconfig)
-        self.setup_working_dir()
-        self._write_input_file()
-        self.t0 = time.time()
-        utils.popenAndCall(self.post_exec, self.exe, shell=True,
-                                                    cwd=self.working_dir)
-        self.log("Running...")
+        self.log = utils.print_brander(self.name + " " + self['description'])
     
     def _write_input_file(self):
-        native_config = self.config_translator(self.config)
+        native_config = self.config_translator(self)
         rtm_vars = self.input_generator(native_config)
         try:
             infile = open(os.path.join(self.working_dir, self.input_file), 'w')
@@ -98,16 +88,32 @@ class _RTM(object):
                 raise self.FileSystemError("Huh. Can't make some symlinks "\
                     "that I need in order to work. Maybe in a future version "\
                     "I'll be SMARTS enough to fall back to something...")
-        self.log(plain=True) # just a new line
+        self.log(plain=True) # clear the line \n
+    
+    def go(self, callback=None, newconfig={}):
+        
+        self.callback = callback
+        self.update(newconfig)
+        self.setup_working_dir()
+        self._write_input_file()
+        self.t0 = time.time()
+        utils.popenAndCall(self.post_exec, self.exe, shell=True,
+                                                    cwd=self.working_dir)
+        self.log("Running...")
     
     def post_exec(self):
         tf = time.time()
         self.log("Done in %#.3gs." % (tf-self.t0))
         output_path = os.path.join(self.working_dir, self.output_file)
-        self.result = numpy.genfromtxt(output_path,
-                                            skip_header=self.output_headers)
-        self.clean_up()
         try:
+            self.result = numpy.genfromtxt(
+                            output_path, skip_header=self.output_headers)
+        except StopIteration:
+            raise self.FileSystemError("Something went wrong reading output!")
+            
+        if self.clean_after:
+            self.clean_up()
+        try: 
             self.callback(self.result)
         except TypeError:
             pass
