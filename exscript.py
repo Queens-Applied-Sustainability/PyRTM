@@ -1,23 +1,28 @@
 from pyrtm import rtm, utils
 
-"""
+
 print "\nTest 1: a single run of SBdart"
 sbdart = rtm.SBdart()
 myresult = sbdart()
-print myresult[:9]
-"""
+print myresult
 
 print utils.underline("Test 2: single run of SMARTS", strong=True)
 smarts = rtm.SMARTS()
 smarts_results = smarts()
 print smarts_results
 
-"""
 print utils.underline("Test 3: ALL THE rtms", strong=True)
 every_rtm = rtm.All()
 all_results = every_rtm()
-print [result[:9] if result else None for result in all_results]
-"""
+print all_results #[result if result else None for result in all_results]
+
+
+
+
+
+
+
+
 
 """
 before

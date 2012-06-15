@@ -31,6 +31,8 @@ import tempfile
 import threading
 import time
 
+import numpy
+
 import utils
 import settings
 
@@ -125,8 +127,8 @@ class SMARTS(_RTM):
     executable = 'smarts295'
     resources = ['Albedo', 'CIE_data', 'Gases', 'Solar']
     input_file = 'smarts295.inp.txt'
-    output_file = 'smarts295.out.txt'
-    output_extra = ['log.txt', 'smarts295.ext.txt']
+    output_file = 'smarts295.ext.txt'
+    output_extra = ['log.txt', 'smarts295.out.txt']
     
     @property
     def rtm_vars(self):
@@ -139,8 +141,16 @@ class SMARTS(_RTM):
         p.wait()
         return
         
-    def read_output(self): pass # FIXME
+    def read_output(self):
         
+        """
+        try:
+            raw_output = open(os.path.join(self.working_dir, self.output_file))
+        except IOError:
+            raise self.FileSystemError("Can't open the raw output file.")
+        """
+        output = os.path.join(self.working_dir, self.output_file)
+        return numpy.genfromtxt(output, skip_header=1)
 
 
 class SBdart(_RTM):
@@ -171,6 +181,7 @@ class SBdart(_RTM):
             else:
                 self.log(warn_file.readline(), no_break=True) # has break
                 warn_file.close()
+        """
         try:
             raw_output = open(os.path.join(self.working_dir, self.output_file))
         except IOError:
@@ -182,7 +193,9 @@ class SBdart(_RTM):
             
         output = csv.reader(raw_output, delimiter=' ')
         return [float(entry[6]) for entry in output]    #FIXME not really the right data...
-        
+        """
+        output = os.path.join(self.working_dir, self.output_file)
+        return numpy.genfromtxt(output, skip_header=3)
 
 
 def All(*args, **kwargs):
