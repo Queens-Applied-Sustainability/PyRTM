@@ -53,28 +53,24 @@ class _RTM(object):
     output_file = None
     output_extra = []
     output_headers = None
+    exe = None
     my_dir = '/home/phil/rtm/PyRTM' # FIXME FIXME FIXME FIXME
     
     def __init__(self, initconfig=None):
         self.log = utils.print_brander(self.name)
-        self.log("Loading default configuration.")
+        self.result = None
         self.config = utils.RTMConfig(settings.default_config)
         if initconfig:
             self.log("Applying initial configuration.")
             self.config.update(initconfig)
     
-    def __call__(self, newconfig={}):
+    def __call__(self, callback=None, newconfig={}):
+        self.callback = callback
         self.config.update(newconfig)
         self.setup_working_dir()
         self._write_input_file()
-        self.log("Running...")
-        t0 = time.time()
+        #self.log("Done in %#.3gs." % (tf-t0))
         self.run_rtm()
-        tf = time.time()
-        self.log("Done in %#.3gs." % (tf-t0))
-        result = self.read_output()
-        self.clean_up()
-        return result
     
     def _write_input_file(self):
         native_config = self.config_translator(self.config)
@@ -86,12 +82,10 @@ class _RTM(object):
         infile.write(str(rtm_vars))
         infile.close()
     
-    @property
-    @abc.abstractmethod
-    def rtm_vars(self): pass
-    
-    @abc.abstractmethod
-    def run_rtm(self): return
+    def run_rtm(self):
+        utils.popenAndCall(self.post_exec, self.exe, shell=True,
+                                                    cwd=self.working_dir)
+        self.log("Running...")
     
     def setup_working_dir(self):
 
@@ -109,9 +103,15 @@ class _RTM(object):
                     "I'll be SMARTS enough to fall back to something...")
         self.log(plain=True) # just a new line
     
-    def read_output(self):
+    def post_exec(self):
         output_path = os.path.join(self.working_dir, self.output_file)
-        return numpy.genfromtxt(output_path, skip_header=self.output_headers)
+        self.result = numpy.genfromtxt(output_path,
+                                            skip_header=self.output_headers)
+        self.clean_up()
+        try:
+            self.callback(self.result)
+        except TypeError:
+            pass
     
     def clean_up(self):
         try:
@@ -137,13 +137,7 @@ class SMARTS(_RTM):
     output_file = 'smarts295.ext.txt'
     output_headers = 1
     output_extra = ['log.txt', 'smarts295.out.txt']
-    
-    def run_rtm(self):
-        exe = './%s > log.txt' % self.executable
-        self.log("exec command: %s" % exe)
-        p = subprocess.Popen(exe, shell=True, cwd=self.working_dir)
-        p.wait()
-        return
+    exe = './%s > log.txt' % executable
 
 
 class SBdart(_RTM):
@@ -155,13 +149,7 @@ class SBdart(_RTM):
     input_generator = utils.Namelist('INPUT')
     output_file = 'OUTPUT'
     output_headers = 3
-        
-    def run_rtm(self):
-        exe = './%s > %s' % (self.executable, self.output_file)
-        self.log("exec command: %s" % exe)
-        p = subprocess.Popen(exe, shell=True, cwd=self.working_dir)
-        p.wait()
-        return
+    exe = './%s > %s' % (executable, output_file)
     
     def read_output(self):
         files = os.listdir(self.working_dir)
