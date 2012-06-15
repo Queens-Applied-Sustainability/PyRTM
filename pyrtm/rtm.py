@@ -48,8 +48,11 @@ class _RTM(object):
     bin_path = None
     resources = []
     input_file = None
+    input_translator = None
+    input_generator = None
     output_file = None
     output_extra = []
+    output_headers = None
     my_dir = '/home/phil/rtm/PyRTM' # FIXME FIXME FIXME FIXME
     
     def __init__(self, initconfig=None):
@@ -63,7 +66,7 @@ class _RTM(object):
     def __call__(self, newconfig={}):
         self.config.update(newconfig)
         self.setup_working_dir()
-        self._write_input_file(self.rtm_vars)
+        self._write_input_file()
         self.log("Running...")
         t0 = time.time()
         self.run_rtm()
@@ -73,8 +76,9 @@ class _RTM(object):
         self.clean_up()
         return result
     
-    def _write_input_file(self, rtm_vars):
-        
+    def _write_input_file(self):
+        native_config = self.config_translator(self.config)
+        rtm_vars = self.input_generator(native_config)
         try:
             infile = open(os.path.join(self.working_dir, self.input_file), 'w')
         except:
@@ -105,8 +109,9 @@ class _RTM(object):
                     "I'll be SMARTS enough to fall back to something...")
         self.log(plain=True) # just a new line
     
-    @abc.abstractmethod
-    def read_output(self): pass
+    def read_output(self):
+        output_path = os.path.join(self.working_dir, self.output_file)
+        return numpy.genfromtxt(output_path, skip_header=self.output_headers)
     
     def clean_up(self):
         try:
@@ -127,12 +132,11 @@ class SMARTS(_RTM):
     executable = 'smarts295'
     resources = ['Albedo', 'CIE_data', 'Gases', 'Solar']
     input_file = 'smarts295.inp.txt'
+    config_translator = settings.translate_smarts
+    input_generator = utils.smarts_cards
     output_file = 'smarts295.ext.txt'
+    output_headers = 1
     output_extra = ['log.txt', 'smarts295.out.txt']
-    
-    @property
-    def rtm_vars(self):
-        return utils.smarts_cards(settings.translate_smarts(self.config))
     
     def run_rtm(self):
         exe = './%s > log.txt' % self.executable
@@ -140,17 +144,6 @@ class SMARTS(_RTM):
         p = subprocess.Popen(exe, shell=True, cwd=self.working_dir)
         p.wait()
         return
-        
-    def read_output(self):
-        
-        """
-        try:
-            raw_output = open(os.path.join(self.working_dir, self.output_file))
-        except IOError:
-            raise self.FileSystemError("Can't open the raw output file.")
-        """
-        output = os.path.join(self.working_dir, self.output_file)
-        return numpy.genfromtxt(output, skip_header=1)
 
 
 class SBdart(_RTM):
@@ -158,11 +151,10 @@ class SBdart(_RTM):
     bin_path = os.path.join('bin', 'sbdart')
     executable = 'drtx'
     input_file = 'INPUT'
+    config_translator = settings.translate_sbdart
+    input_generator = utils.Namelist('INPUT')
     output_file = 'OUTPUT'
-    
-    @property
-    def rtm_vars(self):
-        return utils.Namelist('INPUT', settings.translate_sbdart(self.config))
+    output_headers = 3
         
     def run_rtm(self):
         exe = './%s > %s' % (self.executable, self.output_file)
@@ -181,21 +173,8 @@ class SBdart(_RTM):
             else:
                 self.log(warn_file.readline(), no_break=True) # has break
                 warn_file.close()
-        """
-        try:
-            raw_output = open(os.path.join(self.working_dir, self.output_file))
-        except IOError:
-            raise self.FileSystemError("Can't open the raw output file.")
         
-        for i in range(3):
-            # skip the first couple garbage lines in the output
-            next(raw_output)
-            
-        output = csv.reader(raw_output, delimiter=' ')
-        return [float(entry[6]) for entry in output]    #FIXME not really the right data...
-        """
-        output = os.path.join(self.working_dir, self.output_file)
-        return numpy.genfromtxt(output, skip_header=3)
+        return _RTM.read_output(self)
 
 
 def All(*args, **kwargs):

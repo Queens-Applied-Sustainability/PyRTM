@@ -29,7 +29,7 @@ import threading
 from collections import Iterable
 
 
-def smarts_cards(sconf):
+def smarts_cards(self, sconf):
     """ BLAH BLAH BLHA """
     
     annoying = {'content': ''}
@@ -186,6 +186,11 @@ class Namelist(dict):
         out += ',\n'.join(fvals)
         out += '%s$END' % ('\n' if bool(self.items()) else '')
         return out
+    
+    def __call__(self, newstuff=None):
+        if newstuff:
+            self.update(newstuff)
+        return self
     
     def fval(self, val, first_level=True):
         """
