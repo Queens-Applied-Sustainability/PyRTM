@@ -14,7 +14,7 @@ print smarts_results
 print utils.underline("Test 3: ALL THE rtms", strong=True)
 every_rtm = rtm.All()
 all_results = every_rtm()
-print all_results #[result if result else None for result in all_results]
+print all_results
 
 
 
