@@ -1,7 +1,7 @@
 from pyrtm import rtm, utils
 
 
-print "\nTest 1: a single run of SBdart"
+print utils.underline("Test 1: a single run of SBdart", strong=True)
 sbdart = rtm.SBdart()
 myresult = sbdart()
 print myresult
