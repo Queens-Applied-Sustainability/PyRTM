@@ -108,7 +108,7 @@ class _RTM(object):
     
     def clean_up(self):
         try:
-            pass#shutil.rmtree(self.working_dir)
+            shutil.rmtree(self.working_dir)
         except NameError:
             self.log("Nothing to clean -- was it ever created?")
         except OSError:
@@ -138,7 +138,9 @@ class SMARTS(_RTM):
         p = subprocess.Popen(exe, shell=True, cwd=self.working_dir)
         p.wait()
         return
+        
     def read_output(self): pass # FIXME
+        
 
 
 class SBdart(_RTM):
@@ -167,7 +169,7 @@ class SBdart(_RTM):
             except IOError:
                 self.log(warning)
             else:
-                self.log(warn_file.readline(), no_break=True) #line has a break
+                self.log(warn_file.readline(), no_break=True) # has break
                 warn_file.close()
         try:
             raw_output = open(os.path.join(self.working_dir, self.output_file))

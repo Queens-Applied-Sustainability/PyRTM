@@ -36,20 +36,20 @@ def smarts_cards(sconf):
     def card_print(something, comment=None, no_break=False):
         annoying['content'] += str(something)
         if comment:
-            annoying['content'] += ' \t! %s' % comment
+            annoying['content'] += ' \t\t\t! %s' % comment
         if not no_break:
             annoying['content'] += '\n'
     
     # CARD 1
-    card_print(sconf.get('COMNT', 'Hello_world'), '1 COMNT')
+    card_print('\'%s\'' % sconf.get('COMNT', 'Hello_world'), '1 COMNT')
     
     # CARD 2
     card_print(1, '2 ISPR mode select')
-    card_print('0.0003, 0, 0.1') # FIXME don't hard-code
+    card_print('1002 0 0.1') # FIXME don't hard-code
     
     # CARD 3
     card_print(0, '3 IATMOS mode select')
-    card_print('-44, 50, SUMMER, -44') # FIXME don't hard-code some
+    card_print('-20 50 \'SUMMER\' -15') # FIXME don't hard-code some
     
     # Card 4
     card_print(2, '4 IH2O mode select')
@@ -61,33 +61,29 @@ def smarts_cards(sconf):
     card_print(1, '6 IGAS') # use defaults	
     
     # Card 7
-    card_print('390, 0, 1', '7 qCO2 ppm') # FIXME
-    card_print(0)
-    """
+    card_print('390', '7 qCO2 ppm') # FIXME ?!?!??!
+    card_print(0) # FIXME !?!??!
+    
     # Card 8
-    card_print('USER', '8 AEROS')
-    card_print('1, 1, 0.8, 0.7') # FIXME don't hard-code
+    card_print('\'USER\'', '8 AEROS')
+    card_print('1 1 0.8 0.7') # FIXME don't hard-code
     
     # Card 9
     card_print(1, '9 ITURB')
     card_print(1) # FIXME Horray iterated value?!
-    "" "
+    
     # Card 10
     card_print(5, '10 IALBDX')
     card_print(0)
     
     # Card 11
-    card_print('280, 4000, 1, 1367', '11 blergh')
-    "" "
+    card_print('280 4000 1 1367', '11 blergh')
+    
     # Card 12
     card_print(2, '12 IPRT')
     card_print('280, 4000, 2')
     card_print('5')
-    card_print('2')
-    card_print('3')
-    card_print('4')
-    card_print('5')
-    card_print('11')
+    card_print('2 3 4 5 11')
     
     # Card 13
     card_print(0, '13 ICIRC')
@@ -103,9 +99,9 @@ def smarts_cards(sconf):
     
     # Card 17
     card_print(3, '17 IMASS')
-    card_print('2012, 6, 14, 12, 44, -73, -5')
+    card_print('2012 6 14 12 44 -73 -5')
     
-    """
+    
     return annoying['content']
     
     """
