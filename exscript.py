@@ -1,39 +1,21 @@
 from pyrtm import rtm, utils
 
-"""
-print utils.underline("Test 1: a single run of SBdart", strong=True)
-sbdart = rtm.SBdart()
-myresult = sbdart()
-print myresult
-
-print utils.underline("Test 2: single run of SMARTS", strong=True)
-smarts = rtm.SMARTS()
-smarts_results = smarts()
-print smarts_results
-
-print utils.underline("Test 3: ALL THE rtms", strong=True)
-every_rtm = rtm.All()
-all_results = every_rtm()
-print all_results
-"""
-
-
 def donecallback(results):
-    print results
-
+    print results[0]
 
 print utils.underline("Test 1: a single run of SBdart", strong=True)
-sbdart = rtm.SBdart()
+sbdart = rtm.SBdart(run="Test 1")
 sbdart(donecallback)
 
 print utils.underline("Test 2: single run of SMARTS", strong=True)
-smarts = rtm.SMARTS()
+smarts = rtm.SMARTS(run="Test 2")
 smarts(donecallback)
 
+"""
 print utils.underline("Test 3: ALL THE rtms", strong=True)
-every_rtm = rtm.All()
+every_rtm = rtm.All(run="Test 3")
 every_rtm(donecallback)
-
+"""
 
 
 

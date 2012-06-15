@@ -56,7 +56,9 @@ class _RTM(object):
     exe = None
     my_dir = '/home/phil/rtm/PyRTM' # FIXME FIXME FIXME FIXME
     
-    def __init__(self, initconfig=None):
+    def __init__(self, initconfig=None, run=None):
+        if run:
+            self.name += " " + run
         self.log = utils.print_brander(self.name)
         self.result = None
         self.config = utils.RTMConfig(settings.default_config)
@@ -69,8 +71,10 @@ class _RTM(object):
         self.config.update(newconfig)
         self.setup_working_dir()
         self._write_input_file()
-        #self.log("Done in %#.3gs." % (tf-t0))
-        self.run_rtm()
+        self.t0 = time.time()
+        utils.popenAndCall(self.post_exec, self.exe, shell=True,
+                                                    cwd=self.working_dir)
+        self.log("Running...")
     
     def _write_input_file(self):
         native_config = self.config_translator(self.config)
@@ -82,13 +86,7 @@ class _RTM(object):
         infile.write(str(rtm_vars))
         infile.close()
     
-    def run_rtm(self):
-        utils.popenAndCall(self.post_exec, self.exe, shell=True,
-                                                    cwd=self.working_dir)
-        self.log("Running...")
-    
     def setup_working_dir(self):
-
         self.working_dir = tempfile.mkdtemp(suffix=self.name)
         # symbolically link to the executable and resources
         self.log("Linking", no_break=True)
@@ -104,6 +102,8 @@ class _RTM(object):
         self.log(plain=True) # just a new line
     
     def post_exec(self):
+        tf = time.time()
+        self.log("Done in %#.3gs." % (tf-self.t0))
         output_path = os.path.join(self.working_dir, self.output_file)
         self.result = numpy.genfromtxt(output_path,
                                             skip_header=self.output_headers)

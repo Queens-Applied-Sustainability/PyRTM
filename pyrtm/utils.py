@@ -30,7 +30,38 @@ from collections import Iterable
 
 
 def smarts_cards(self, sconf):
-    """ BLAH BLAH BLHA """
+    """
+    Format the SMARTS input file.
+    
+    Input parameters available in this version:
+    
+     * Card 2, mode 1: SPR, ALTIT, HEIGHT -- surface pressure (in mb), altitude
+       of surface (km), and height above surface (km)
+    
+     * Card 3, mode 0: 
+     
+        TODO: Finish this and actually implement what is documented as being
+              implemented...
+    
+    SMARTS input files are a sequence of lines representing punch-card inputs.
+    
+    Most of the time there will be a mode selector for a group of cards, which
+    often affects how many cards that input expects. There are dependencies
+    between groups of cards, making it less than trivial to generate them
+    programatically.
+    
+    To keep things simple and to save time, many parameters have been hard-
+    coded to defaults apporpriate for the optimizing calculations by the
+    Queen's University Applied Sustainability Lab summer project coded by Phil
+    for part of Rob's PhD stuff, for which PyRTM was written in the first
+    place.
+    
+    So there is no fully-featured python input file generator for SMARTS that I
+    (phil) know about. If you need one I'd love to collaborate; if you build
+    one please let me know so I can replace this one with it! The
+    specifications are laid out in detail in the SMARTS user manual,
+    http://rredc.nrel.gov/solar/models/SMARTS/relatedrefs/SMARTS295_Users_Manual_Linux.pdf
+    """
     
     annoying = {'content': ''}
     def card_print(something, comment=None, no_break=False):
@@ -82,8 +113,8 @@ def smarts_cards(self, sconf):
     # Card 12
     card_print(2, '12 IPRT')
     card_print('280, 4000, 2')
-    card_print('5')
-    card_print('2 3 4 5 11')
+    card_print('16')
+    card_print('2 3 4 5 11 15 16 17 18 19 20 27 28 29 30 31')
     
     # Card 13
     card_print(0, '13 ICIRC')
@@ -101,11 +132,10 @@ def smarts_cards(self, sconf):
     card_print(3, '17 IMASS')
     card_print('2012 6 14 12 44 -73 -5')
     
-    
+    # Spit out our formatted string.
     return annoying['content']
     
     """
-    
     2 -> mode 1 site pressure 
     2a (we input), altitude, height=0
     
@@ -148,11 +178,7 @@ def smarts_cards(self, sconf):
     17 -> mode 3 IMASS
     17a -> ...
     
-    
-    
     """
-    
-    
 
 
 class Namelist(dict):
@@ -296,10 +322,6 @@ class EachList(list):
     def __delattr__(self, attr):
         for thing in self:
             delattr(thing, attr)
-    
-    #def __getitem__(self, each_slice): #FIXME FIXME FIXME
-    #    return EachList([list.__getitem__(thing, each_slice) for thing in self])
-    
 
 
 class RTMConfig(dict):
@@ -309,7 +331,7 @@ class RTMConfig(dict):
 
 
 class _Translation(object):
-    "Base class for translations"
+    "Base class for config translations"
     def __call__(self, foreign):
         native = {}
         for key, val in foreign.iteritems():
