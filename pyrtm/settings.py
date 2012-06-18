@@ -33,7 +33,7 @@ default_config = {
     'latitude': 44,
     'longitude': 283.7,
     
-    'lower_limit': 0.25,
+    'lower_limit': 0.28,
     'upper_limit': 2.5,
     
     'output': 'per wavelength',

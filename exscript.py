@@ -1,19 +1,32 @@
-from pyrtm import rtm, utils
+import pylab
 
-def donecallback(results):
-    print results[0]
+from pyrtm import rtm, utils
 
 config = utils.RTMConfig({'description': 'Test 1'})
 
+
+""" """
+def sbdartcallback(results):
+    pylab.plot([result[0] for result in results],
+               [result[5] for result in results])
+    pylab.show()
+
 print utils.underline("Test 1: A single run of SBdart", strong=True)
 sbdart = rtm.SBdart(config)
-sbdart.go(donecallback)
+sbdart.go(sbdartcallback)
+
+""" """
+def smartscallback(results):
+    pylab.plot([result[0]/1000 for result in results],
+               [result[1]*1000 for result in results])
+    pylab.show()
 
 print utils.underline("Test 2: A single run of SMARTS", strong=True)
 smarts = rtm.SMARTS(config)
-smarts.go(donecallback)
+smarts.go(smartscallback)
 
-"""
+
+""" " ""
 print utils.underline("Test 3: ALL THE rtms", strong=True)
 every_rtm = rtm.All(run="Test 3")
 every_rtm(donecallback)

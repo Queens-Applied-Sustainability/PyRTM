@@ -52,7 +52,7 @@ class _RTM(dict):
     output_extra = []   # What other extra files do I write?
     output_headers = None   # How many garbage lines to I produce?
     exe = None          # What command makes me go?
-    my_dir = '/home/phil/rtm/PyRTM' # FIXME FIXME FIXME FIXME ugly ugly ugly
+    my_dir = '/home/phil/PyRTM' # FIXME FIXME FIXME FIXME ugly ugly ugly
     clean_after = True  # Shall I erase the temporary directory I created?
     
     def __init__(self, *args, **kwargs):
@@ -120,7 +120,7 @@ class _RTM(dict):
     
     def clean_up(self):
         try:
-            shutil.rmtree(self.working_dir)
+            pass#shutil.rmtree(self.working_dir)
         except NameError:
             self.log("Nothing to clean -- was it ever created?")
         except OSError:
