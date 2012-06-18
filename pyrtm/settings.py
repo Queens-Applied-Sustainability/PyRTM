@@ -29,7 +29,7 @@ default_config = {
     'description': 'Hello World -- Default Config',
 
     'day_of_year': 103,
-    'time': 19.0, # GMT decimal hours
+    'time': 14.0, # GMT decimal hours
     'latitude': 44,
     'longitude': 283.7,
     
@@ -52,6 +52,92 @@ later -- cloud cover from cloud photos?
 
 iterating on TAERST or DBAER
 """
+
+@utils.instantiator
+class translate_smarts(utils._Translation):
+    "Translates both keys and values where appropriate for use with SMARTS"
+    
+    def __call__(self, foreign):
+        native = {
+            # Card 1
+            'COMNT': 'Hello_World',
+            # Card 2 Mode 1
+            'SPR': 1000,
+            'ALTIT': 0,
+            'HEIGHT': 0,
+            # Card 3 Mode 0
+            'TAIR': 15, # temp at site-level
+            'RH': 50,
+            'SEASON': 'SUMMER',
+            'TDAY': 7, # average daily temp
+            # Card 7
+            'qCO2': 390, # ppm CO2
+            # Card 8 Mode USER
+            'ALPHA1': 1,
+            'ALPHA2': 1,
+            'OMEGL': 0.8,
+            'GG': 0.8,
+            # Card 9 Mode 1
+            'BETA': 1,
+            # Card 11
+            'WLMN': 280,
+            'WLMX': 4000,
+            'SUNCOR': 1,
+            'SOLARC': 1367,
+            # Card 12 Mode 2
+            'WPMN': 280,
+            'WPMX': 4000,
+            'INTVL': 2,
+            # Card 17 Mode 3
+            'YEAR': 2012,
+            'MONTH': 6,
+            'DAY': 14,
+            'HOUR': 12,
+            'LATIT': 44,
+            'LONGIT': -73,
+            'ZONE': -5,
+        }
+        for key, val in foreign.iteritems():
+            native.update(getattr(self, key)(val))
+        return native
+    
+    _atmospheres = {'tropical': 'TRL',
+                    'mid-latitude summer': 'MLS',
+                    'mid-latitude winter': 'MLW',
+                    'sub-arctic summer': 'SAS',
+                    'sub-arctic winter': 'SAW',
+                    'us62': 'USSA'}
+                    
+    _aerosols = {'rural': 'S&F_RURAL',
+                 'urban': 'S&F_URBAN',
+                 'maritime': 'S&F_MARIT',
+                 'tripospheric': 'S&F_TROPO',
+                 'continental': 'SRA_CONTL',
+                 'urban': 'SRA_URBAN',
+                 'maritime': 'SRA_MARIT',
+                 'Braslau & Dave C': 'B&D_C',
+                 'Braslau & Dave C1': 'B&D_c1',
+                 'desert': 'DESERT_MIN',
+                 'crazy desert': 'DESERT_MAX',
+                 'custom': 'USER',
+                 # FIXME ...
+                 'background stratospheric': 'B&D_C'}
+    
+    description = lambda self, val: {'COMNT': "_".join(val[:64].split())}
+    longitude = lambda self, val: {'LONGIT': val}
+    latitude = lambda self, val: {'LATIT': val}
+    def day_of_year(self, val):
+        month = 0 # FIXME
+        day = 5 # FIXME
+        return {'MONTH': month, 'DAY': day}
+    time = lambda self, val: {'HOUR': val}
+    atmosphere = lambda self, val: {'ATMOS': self._atmospheres.get(val)}
+    aerosols = lambda self, val: {'AEROS': self._aerosols.get(val)}
+    lower_limit = lambda self, val: {'WLMN': val*1000, 'WPMN': val*1000}
+    upper_limit = lambda self, val: {'WLMX': val*1000, 'WPMX': val*1000}
+    resolution = lambda self, val: {'WLINC': val}
+    output = lambda self, val: {}
+
 
 @utils.instantiator
 class translate_sbdart(utils._Translation):
@@ -102,82 +188,6 @@ class translate_sbdart(utils._Translation):
     upper_limit = lambda self, val: {'WLSUP': val}
     resolution = lambda self, val: {'WLINC': val}
 
-
-@utils.instantiator
-class translate_smarts(utils._Translation):
-    "Translates both keys and values where appropriate for use with SMARTS"
-    
-    _atmospheres = {'tropical': 'TRL',
-                    'mid-latitude summer': 'MLS',
-                    'mid-latitude winter': 'MLW',
-                    'sub-arctic summer': 'SAS',
-                    'sub-arctic winter': 'SAW',
-                    'us62': 'USSA'}
-                    
-    _aerosols = {'rural': 'S&F_RURAL',
-                 'urban': 'S&F_URBAN',
-                 'maritime': 'S&F_MARIT',
-                 'tripospheric': 'S&F_TROPO',
-                 'continental': 'SRA_CONTL',
-                 'urban': 'SRA_URBAN',
-                 'maritime': 'SRA_MARIT',
-                 'Braslau & Dave C': 'B&D_C',
-                 'Braslau & Dave C1': 'B&D_c1',
-                 'desert': 'DESERT_MIN',
-                 'crazy desert': 'DESERT_MAX',
-                 'custom': 'USER',
-                 # FIXME ...
-                 'background stratospheric': 'B&D_C'}
-    
-    description = lambda self, val: {'COMNT': "_".join(val[:64].split())}
-    
-    longitude = lambda self, val: {'LONGIT': val}
-    latitude = lambda self, val: {'LATIT': val}
-    def day_of_year(self, val):
-        month = 0 # FIXME
-        day = 5 # FIXME
-        return {'MONTH': month, 'DAY': day}
-    time = lambda self, val: {'HOUR': val}
-    
-    atmosphere = lambda self, val: {'ATMOS': self._atmospheres.get(val)}
-    
-    aerosols = lambda self, val: {'AEROS': self._aerosols.get(val)}
-    
-    lower_limit = lambda self, val: {'WLMN': val}
-    upper_limit = lambda self, val: {'WLMX': val}
-    resolution = lambda self, val: {'WLINC': val}
-    
-    output = lambda self, val: {}
-
-
-""" Old testing defaults
-
-    # set up intelligible defaults
-    'description': 'hello world',
-    
-    'day of year': 103,
-    'time': 18.333, # GMT decimal hours
-    'latitude': 44,
-    'longitude': 283.7,
-    
-    'spectrum selector': 'lowtran 7',
-    'filter function': 0, # FIXME what does this mean (SBDART)
-    'resolution': 0, # FIXME sbdart
-    'lower limit': 0.25,
-    'upper limit': 2.5,
-    
-    'zenith angle': 0,
-    
-    'atmosphere': 'mid-latitude summer',
-    'aerosols': 'background stratospheric',
-    'aerosol optical depth': 0.084, # FIXME units?
-    
-    'cloud altitude': [0, 0, 0, 0, 0], # FIXME ...
-    'cloud optical depth': [0, 0, 0, 0, 0],
-    
-    'surface albedo': 'vegetation',
-    'surface elevation': 0.11, # km
-"""
 
 
 

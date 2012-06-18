@@ -73,15 +73,16 @@ def smarts_cards(self, sconf):
             annoying['content'] += '\n'
     
     # CARD 1
-    card_print('\'%s\'' % sconf.get('COMNT', 'Hello_world'), '1 COMNT')
+    card_print('\'%s\'' % sconf['COMNT'], '1 COMNT')
     
     # CARD 2
     card_print(1, '2 ISPR mode select')
-    card_print('1002 0 0.1') # FIXME don't hard-code
+    card_print('%s %s %s' % (sconf['SPR'], sconf['ALTIT'], sconf['HEIGHT']))
     
     # CARD 3
     card_print(0, '3 IATMOS mode select')
-    card_print('-20 50 \'SUMMER\' -15') # FIXME don't hard-code some
+    card_print('%s %s \'%s\' %s' % (sconf['TAIR'], sconf['RH'],
+                                    sconf['SEASON'], sconf['TDAY'])) # FIXME
     
     # Card 4
     card_print(2, '4 IH2O mode select')
@@ -93,27 +94,29 @@ def smarts_cards(self, sconf):
     card_print(1, '6 IGAS') # use defaults	
     
     # Card 7
-    card_print('390', '7 qCO2 ppm') # FIXME ?!?!??!
+    card_print(str(sconf['qCO2']), '7 qCO2 ppm') # FIXME ?!?!??!
     card_print(0) # FIXME !?!??!
     
     # Card 8
     card_print('\'USER\'', '8 AEROS')
-    card_print('1 1 0.8 0.7') # FIXME don't hard-code
+    card_print('%s %s %s %s' % (sconf['ALPHA1'], sconf['ALPHA2'],
+                                                sconf['OMEGL'], sconf['GG']))
     
     # Card 9
     card_print(1, '9 ITURB')
-    card_print(1) # FIXME Horray iterated value?!
+    card_print(str(sconf['BETA']))
     
     # Card 10
     card_print(5, '10 IALBDX')
     card_print(0)
     
     # Card 11
-    card_print('280 4000 1 1367', '11 blergh')
+    card_print('%s %s %s %s' % (sconf['WLMN'], sconf['WLMX'], sconf['SUNCOR'],
+                                                sconf['SOLARC']), '11 blergh')
     
     # Card 12
     card_print(2, '12 IPRT')
-    card_print('280, 4000, 2')
+    card_print('%s %s %s' % (sconf['WPMN'], sconf['WPMX'], sconf['INTVL']))
     card_print('16')
     card_print('2 3 4 5 11 15 16 17 18 19 20 27 28 29 30 31')
     
@@ -131,9 +134,12 @@ def smarts_cards(self, sconf):
     
     # Card 17
     card_print(3, '17 IMASS')
-    card_print('2012 6 14 12 44 -73 -5')
+    card_print('%s %s %s %s %s %s %s' % (sconf['YEAR'], sconf['MONTH'],
+               sconf['DAY'], sconf['HOUR'], sconf['LATIT'], sconf['LONGIT'],
+               sconf['ZONE']))
     
     # Spit out our formatted string.
+    card_print('')
     return annoying['content']
     
     """
