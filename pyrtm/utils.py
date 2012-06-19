@@ -27,6 +27,7 @@ import subprocess
 import threading
 
 from collections import Iterable
+from numpy import exp, power
 
 import settings
 
@@ -346,6 +347,40 @@ class _Translation(object):
         for key, val in foreign.iteritems():
             native.update(getattr(self, key)(val))
         return native
+
+def rh_to_water(rel_humid, temp):
+    """
+    Returns the saturation vapour pressure in mb
+    
+    Saturation vapour pressure (mb) from [1] C. Gueymard, Assessment of the
+    Accuracy and Computing Speed of Simplified Saturation Vapor Equations Using
+    a New Reference Dataset, J. Appl. Meteor. 32 (1993) 1294-1300.
+    
+    Adapted from some matlab code
+    """
+    RH = rel_humid
+    T = temp
+    pws = (6.110455 +
+           (0.4440371 * T) +
+           (1.430201E-2 * power(T, 2)) +
+           (2.652469E-4 * power(T, 3)) +
+           (3.03571E-6 * power(T, 4)) +
+           (2.036766E-8 * power(T, 5)) -
+           (1.469687E-13 * power(T, 6)))
+    
+    #saturation vapour density
+    rho_v = 216.7 * RH * pws / 100 / (T+273)
+    theta = (T + 273.15) / 273.15
+
+    #water vapour scale height
+    H_v = (0.4976 + 1.5265 * theta +
+           exp(13.6897 * theta-14.9188 * power(theta, 3)))
+    
+    #preciptable water (cm)
+    w = 0.1 * H_v * rho_v
+
+    return w
+
 
 
 

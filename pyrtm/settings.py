@@ -33,6 +33,9 @@ default_config = {
     'latitude': 44,
     'longitude': 283.7,
     
+    'temperature': 15,
+    'relative_humidity': 35,
+    
     'lower_limit': 0.28,
     'upper_limit': 2.5,
     
@@ -62,44 +65,28 @@ class translate_smarts(utils._Translation):
             # Card 1
             'COMNT': 'Hello_World',
             # Card 2 Mode 1
-            'SPR': 1000,
-            'ALTIT': 0,
-            'HEIGHT': 0,
+            'SPR': 1000, 'ALTIT': 0, 'HEIGHT': 0,
             # Card 3 Mode 0
-            'TAIR': 15, # temp at site-level
-            'RH': 50,
-            'SEASON': 'SUMMER',
-            'TDAY': 7, # average daily temp
+            'TAIR': 15, 'RH': 35, 'SEASON': 'SUMMER', 'TDAY': 7,
             # Card 7
             'qCO2': 390, # ppm CO2
             # Card 8 Mode USER
-            'ALPHA1': 1,
-            'ALPHA2': 1,
-            'OMEGL': 0.8,
-            'GG': 0.8,
+            'ALPHA1': 1.4, 'ALPHA2': 1.4, 'OMEGL': 0.8, 'GG': 0.8,
             # Card 9 Mode 1
-            'BETA': 1,
+            'BETA': 0.08,
             # Card 11
-            'WLMN': 280,
-            'WLMX': 4000,
-            'SUNCOR': 1,
-            'SOLARC': 1367,
+            'WLMN': 280, 'WLMX': 4000, 'SUNCOR': 1, 'SOLARC': 1367,
             # Card 12 Mode 2
-            'WPMN': 280,
-            'WPMX': 4000,
-            'INTVL': 2,
+            'WPMN': 280, 'WPMX': 4000, 'INTVL': 2,
             # Card 17 Mode 3
-            'YEAR': 2012,
-            'MONTH': 6,
-            'DAY': 14,
-            'HOUR': 12,
-            'LATIT': 44,
-            'LONGIT': -73,
-            'ZONE': -5,
+            'YEAR': 2012, 'MONTH': 6, 'DAY': 14, 'HOUR': 12,
+            'LATIT': 44, 'LONGIT': -73, 'ZONE': -5,
         }
         for key, val in foreign.iteritems():
             native.update(getattr(self, key)(val))
         return native
+    
+    _months = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365]
     
     _atmospheres = {'tropical': 'TRL',
                     'mid-latitude summer': 'MLS',
@@ -126,13 +113,22 @@ class translate_smarts(utils._Translation):
     description = lambda self, val: {'COMNT': "_".join(val[:64].split())}
     longitude = lambda self, val: {'LONGIT': val}
     latitude = lambda self, val: {'LATIT': val}
-    def day_of_year(self, val):
-        month = 0 # FIXME
-        day = 5 # FIXME
-        return {'MONTH': month, 'DAY': day}
+    altitude = lambda self, val: {'ALTIT': val}
+    height = lambda self, val: {'HEIGHT': val}
+    year = lambda self, val: {'YEAR': val}
+    day_of_year = lambda self, val: {
+        # TODO: Move to utilities and unit test
+        'MONTH': min(i for i, m in enumerate(self._months) if m+1 > val),
+        'DAY': min(val-m for m in self._months if val-m > 0)
+    }
     time = lambda self, val: {'HOUR': val}
+    season = lambda self, val: {'SEASON': val}  # TODO calculate it?
+    
     atmosphere = lambda self, val: {'ATMOS': self._atmospheres.get(val)}
-    aerosols = lambda self, val: {'AEROS': self._aerosols.get(val)}
+    #aerosols = lambda self, val: {'AEROS': self._aerosols.get(val)}
+    temperature = lambda self, val: {} # FIXME
+    relative_humidity = lambda self, val: {'RH': val}
+    
     lower_limit = lambda self, val: {'WLMN': val*1000, 'WPMN': val*1000}
     upper_limit = lambda self, val: {'WLMX': val*1000, 'WPMX': val*1000}
     resolution = lambda self, val: {'WLINC': val}
@@ -170,6 +166,7 @@ class translate_sbdart(utils._Translation):
     
     latitude = lambda self, val: {'ALAT': val}
     longitude = lambda self, val: {'ALON': val}
+    altitude = lambda self, val: {'ZOUT': [val, 100]}
     day_of_year = lambda self, val: {'IDAY': val}
     time = lambda self, val: {'TIME': val}
     
@@ -177,6 +174,9 @@ class translate_sbdart(utils._Translation):
     surface_elevation = lambda self, val: {'ZPRES': val}
     
     atmosphere = lambda self, val: {'IDATM': self._atmospheres.get(val)}
+    temperature = lambda self, val: {} # FIXME
+    relative_humidity = lambda self, val: {
+        'UW': utils.rh_to_water(val, 15)} # FIXME self.temperature)}
     cloud_altitude = lambda self, val: {'ZCLOUD': val} # FIXME?
     cloud_optical_depth = lambda self, val: {'TCLOUD': val} # FIXME?
     
