@@ -1,0 +1,69 @@
+
+testing... 1 0
+SBdart 1 1 0: Linking drtx 
+SBdart 1 1 0: Running...
+SBdart 1 1 0: Done in 4.01s.
+SBdart 1 1 0: WARNING >>>>> CHEKIN--vertical temperature step may be too large for good accuracy
+SBdart 1 1 0: Successfully cleaned up temporary files.
+
+testing... 1 1
+SBdart 1 1 1: Linking drtx 
+SBdart 1 1 1: Running...
+SBdart 1 1 1: Done in 3.97s.
+SBdart 1 1 1: WARNING >>>>> CHEKIN--vertical temperature step may be too large for good accuracy
+SBdart 1 1 1: Successfully cleaned up temporary files.
+
+testing... 1 2
+SBdart 1 1 2: Linking drtx 
+SBdart 1 1 2: Running...
+SBdart 1 1 2: Done in 3.96s.
+SBdart 1 1 2: WARNING >>>>> CHEKIN--vertical temperature step may be too large for good accuracy
+SBdart 1 1 2: Successfully cleaned up temporary files.
+
+testing... 1 3
+SBdart 1 1 3: Linking drtx 
+SBdart 1 1 3: Running...
+SBdart 1 1 3: Done in 3.98s.
+SBdart 1 1 3: WARNING >>>>> CHEKIN--vertical temperature step may be too large for good accuracy
+SBdart 1 1 3: Successfully cleaned up temporary files.
+
+testing... 1 4
+SBdart 1 1 4: Linking drtx 
+SBdart 1 1 4: Running...
+SBdart 1 1 4: Done in 4.02s.
+SBdart 1 1 4: WARNING >>>>> CHEKIN--vertical temperature step may be too large for good accuracy
+SBdart 1 1 4: Successfully cleaned up temporary files.
+
+testing... 1 5
+SBdart 1 1 5: Linking drtx 
+SBdart 1 1 5: Running...
+SBdart 1 1 5: Done in 4.01s.
+SBdart 1 1 5: WARNING >>>>> CHEKIN--vertical temperature step may be too large for good accuracy
+SBdart 1 1 5: Successfully cleaned up temporary files.
+
+testing... 1 6
+SBdart 1 1 6: Linking drtx 
+SBdart 1 1 6: Running...
+SBdart 1 1 6: Done in 4.02s.
+SBdart 1 1 6: WARNING >>>>> CHEKIN--vertical temperature step may be too large for good accuracy
+SBdart 1 1 6: Successfully cleaned up temporary files.
+
+testing... 1 7
+SBdart 1 1 7: Linking drtx 
+SBdart 1 1 7: Running...
+SBdart 1 1 7: Done in 3.99s.
+SBdart 1 1 7: WARNING >>>>> CHEKIN--vertical temperature step may be too large for good accuracy
+SBdart 1 1 7: Successfully cleaned up temporary files.
+
+testing... 1 8
+SBdart 1 1 8: Linking drtx 
+SBdart 1 1 8: Running...
+SBdart 1 1 8: Done in 3.68s.
+SBdart 1 1 8: WARNING >>>>> CHEKIN--vertical temperature step may be too large for good accuracy
+SBdart 1 1 8: Successfully cleaned up temporary files.
+
+testing... 2 0
+SBdart 2 1 0: Linking drtx 
+SBdart 2 1 0: Running...
+SBdart 2 2 0: Linking drtx 
+SBdart 2 2 0: Running...
