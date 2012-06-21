@@ -11,24 +11,24 @@ Parameter                   Default     Unit        SBDART  SMARTS
 
 description                 Hello World string         x      x
 year                        2012        year           -      x
-day_of_year                 123         days           x      Calc
+day_of_year                 123         days           x      calc
 time                        10.5        hours GMT      x      x
 latitude                    44.4        degrees        x      x
 longitude                   238.7       degrees        x      x
 altitude                    0           km             x      x
-height                      0           km             -      x
 surface                     vegetation  keywords       x      x
 average_daily_temperature   15          deg C          -      x
 atmosphere                  mid-latitude summer        x      x
-temperature                 15          deg C                 x
+temperature                 15          deg C          -      x
 pressure                    1013.250    mb             x      x
-relative_humidity           35          %              Calc*  x
+relative_humidity           35          %              calc*  x
 season                      SUMMER      keywords       -      x
+single_scattering_albedo    0.8                        x      x
 aerosol_optical_depth       0.08                       x      x
 angstroms_exponent          1.1977                     x      x
 aerosol_asymmetry           0.6         factor         x      x
-Solar correction factor     1           factor         auto
-Solar constant              1367        w/m^2          -
+Solar correction factor     1           factor         auto   calc*
+Solar constant              1367        w/m^2          -      fixed
 CO2 concentration           390         ppm            x      x
 cloud                       0                          x      -
 lower_limit                 0.28        microns        x      x
@@ -38,7 +38,7 @@ Zone??
 
 
 
-* requires temperature... 
+* requires another setting set first
 
 """
 
@@ -55,7 +55,7 @@ sbdart.go(sbdartcallback)
 
 def smartscallback(results):
     pylab.plot([result[0]/1000 for result in results],
-               [result[7]*1000 for result in results])
+               [result[3]*1000 for result in results])
     pylab.show()
 
 print utils.underline("Test 2: A single run of SMARTS", strong=True)

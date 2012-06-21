@@ -29,19 +29,22 @@ default_config = {
     'description': 'Hello World -- Default Config',
 
     'day_of_year': 103,
-    'time': 14.0, # GMT decimal hours
+    'season': 'SUMMER',
+    'time': 17.0, # GMT decimal hours
     'latitude': 44,
     'longitude': 283.7,
     'altitude': 0,
     'surface': 'vegetation',
     
     'atmosphere': 'mid-latitude summer',
+    'average_daily_temperature': 15,
     'temperature': 15,
     'pressure': 1013.250,
     'relative_humidity': 35,
     'carbon_dioxide': 390,
     'pressure': 1013.250,
     
+    'single_scattering_albedo': 0.8,
     'aerosol_optical_depth': 0.08,
     'angstroms_exponent': 1.1977,
     'aerosol_asymmetry': 0.6,
@@ -74,25 +77,15 @@ class translate_smarts(utils._Translation):
     
     def __call__(self, foreign):
         native = {
-            # Card 1
-            'COMNT': 'Hello_World',
             # Card 2 Mode 1
-            'SPR': 1000, 'ALTIT': 0, 'HEIGHT': 0,
-            # Card 3 Mode 0
-            'TAIR': 15, 'RH': 35, 'SEASON': 'SUMMER', 'TDAY': 7,
-            # Card 7
-            'qCO2': 390, # ppm CO2
-            # Card 8 Mode USER
-            'ALPHA1': 1.4, 'ALPHA2': 1.4, 'OMEGL': 0.8, 'GG': 0.7,
-            # Card 9 Mode 1
-            'BETA': 0.08,
+            'HEIGHT': 0,
             # Card 11
-            'WLMN': 280, 'WLMX': 4000, 'SUNCOR': 1, 'SOLARC': 1367,
+            'SOLARC': 1367,
             # Card 12 Mode 2
-            'WPMN': 280, 'WPMX': 4000, 'INTVL': 2,
+            'INTVL': 2,
             # Card 17 Mode 3
-            'YEAR': 2012, 'MONTH': 6, 'DAY': 14, 'HOUR': 12,
-            'LATIT': 44, 'LONGIT': -73, 'ZONE': 0,
+            'YEAR': 2012,
+            'ZONE': 0,
         }
         for key, val in foreign.iteritems():
             native.update(getattr(self, key)(val))
@@ -118,20 +111,25 @@ class translate_smarts(utils._Translation):
     longitude = lambda self, val: {'LONGIT': val}
     latitude = lambda self, val: {'LATIT': val}
     altitude = lambda self, val: {'ALTIT': val}
-    height = lambda self, val: {'HEIGHT': val}
     year = lambda self, val: {'YEAR': val}
-    day_of_year = lambda self, val: utils.day_to_month_day(val)
+    day_of_year = lambda self, val: {
+        'SUNCOR': utils.solar_distance_factor(val),
+        'MONTH': utils.day_to_month_day(val)['MONTH'],
+        'DAY': utils.day_to_month_day(val)['DAY'],
+        }
     time = lambda self, val: {'HOUR': val}
     season = lambda self, val: {'SEASON': val}  # TODO calculate it?
     surface = lambda self, val: {'IALBDX': self._surfaces.get(val)}
     
     atmosphere = lambda self, val: {'ATMOS': self._atmospheres.get(val)}
     #aerosols = lambda self, val: {'AEROS': self._aerosols.get(val)}
-    temperature = lambda self, val: {} # FIXME
+    average_daily_temperature = lambda self, val: {'TAIR': val}
+    temperature = lambda self, val: {'TDAY': val}
     pressure = lambda self, val: {'SPR': val}
     relative_humidity = lambda self, val: {'RH': val}
     carbon_dioxide = lambda self, val: {'qCO2': 390}
     
+    single_scattering_albedo = lambda self, val: {'OMEGL': val}
     aerosol_optical_depth = lambda self, val: {'BETA': val}
     angstroms_exponent = lambda self, val: {'ALPHA1': val, 'ALPHA2': val}
     aerosol_asymmetry = lambda self, val: {'GG': val}
@@ -171,17 +169,21 @@ class translate_sbdart(utils._Translation):
     longitude = lambda self, val: {'ALON': val}
     altitude = lambda self, val: {'ZOUT': [val, 100]}
     day_of_year = lambda self, val: {'IDAY': val}
+    season = lambda self, val: {}  # not supported
     time = lambda self, val: {'TIME': val}
     
     surface = lambda self, val: {'ISALB': self._surfaces.get(val)}
     altitude = lambda self, val: {}#'ZPRES': val} only used for pressure
     
     atmosphere = lambda self, val: {'IDATM': self._atmospheres.get(val)}
-    temperature = lambda self, val: {} # FIXME
+    average_daily_temperature = lambda self, val: {} # not supported
+    temperature = lambda self, val: {} # FIXME?
     pressure = lambda self, val: {'PBAR': val}
     relative_humidity = lambda self, val: {
         'UW': utils.rh_to_water(val, 15)} # FIXME self.temperature)}
     carbon_dioxide = lambda self, val: {'XCO2': val}
+    
+    single_scattering_albedo = lambda self, val: {'WBAER': val}
     aerosol_optical_depth = lambda self, val: {'TAERST': val}
     angstroms_exponent = lambda self, val: {'ABAER': val}
     aerosol_asymmetry = lambda self, val: {'GBAER': val}

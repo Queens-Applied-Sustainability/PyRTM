@@ -53,15 +53,17 @@ class _RTM(dict):
     output_headers = None   # How many garbage lines to I produce?
     exe = None          # What command makes me go?
     my_dir = '/home/phil/PyRTM' # FIXME FIXME FIXME FIXME ugly ugly ugly
-    clean_after = True  # Shall I erase the temporary directory I created?
+    clean_after = True  # Shall I erase the temporary directory I created? 
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, d={}, *args, **kwargs):
         """
         Create default configuration and set up logger.
         
         Accepts configuration parameters passed as a dictionary.
         """
-        super(_RTM, self).__init__(*args, **kwargs)
+        default_d = utils.RTMConfig(settings.default_config)
+        default_d.update(d)
+        super(_RTM, self).__init__(default_d, *args, **kwargs)
         self.result = None
         self.log = utils.print_brander(self.name + " " + self['description'])
     
@@ -91,12 +93,11 @@ class _RTM(dict):
         self.log(plain=True) # clear the line \n
     
     def go(self, callback=None, newconfig={}):
-        
         self.callback = callback
         self.update(newconfig)
         self.setup_working_dir()
         self._write_input_file()
-        self.t0 = time.time()
+        self._t0 = time.time()
         utils.popenAndCall(self.post_exec, self.exe, shell=True,
                                                     cwd=self.working_dir)
         self.log("Running...")
@@ -105,18 +106,18 @@ class _RTM(dict):
         self.update(newconfig)
         self.setup_working_dir()
         self._write_input_file()
-        self.t0 = time.time()
+        self._t0 = time.time()
         proc = subprocess.Popen(self.exe, shell=True, cwd=self.working_dir)
         proc.wait()
-        tf = time.time()
-        self.log("Done in %#.3gs." % (tf-self.t0))
+        self.t = time.time() - self._t0
+        self.log("Done in %#.3gs." % self.t)
         self.read_output()
         self.clean_up()
         return self.result
     
     def post_exec(self):
-        tf = time.time()
-        self.log("Done in %#.3gs." % (tf-self.t0))
+        self.t = time.time() - self._t0
+        self.log("Done in %#.3gs." % self.t)
         self.read_output()
         self.clean_up()
         try: 
@@ -127,10 +128,13 @@ class _RTM(dict):
     def read_output(self):
         output_path = os.path.join(self.working_dir, self.output_file)
         try:
-            self.result = numpy.genfromtxt(
+            rtm_result = numpy.genfromtxt(
                             output_path, skip_header=self.output_headers)
         except StopIteration:
             raise self.FileSystemError("Something went wrong reading output!")
+        else:
+            self.result = {'description': self['description'],
+                           'result': rtm_result}
     
     def clean_up(self):
         if self.clean_after:

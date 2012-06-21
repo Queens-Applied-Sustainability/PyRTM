@@ -27,7 +27,7 @@ import subprocess
 import threading
 
 from collections import Iterable
-from numpy import exp, power
+from numpy import exp, power, cos, pi
 
 import settings
 
@@ -380,4 +380,13 @@ def day_to_month_day(doy):
     day = min(doy-m for m in month_offs if doy-m > 0)
     
     return {'MONTH': month, 'DAY': day}
+
+
+def solar_distance_factor(doy):
+    orbital_eccentricity = 0.01673
+    perihelion = 2
+    factor = (1.0 - orbital_eccentricity * cos(2*pi*(doy - perihelion) / 365))
+    return factor
+
+
 
