@@ -101,32 +101,47 @@ class _RTM(dict):
                                                     cwd=self.working_dir)
         self.log("Running...")
     
+    def get(self, newconfig = {}):
+        self.update(newconfig)
+        self.setup_working_dir()
+        self._write_input_file()
+        self.t0 = time.time()
+        proc = subprocess.Popen(self.exe, shell=True, cwd=self.working_dir)
+        proc.wait()
+        tf = time.time()
+        self.log("Done in %#.3gs." % (tf-self.t0))
+        self.read_output()
+        self.clean_up()
+        return self.result
+    
     def post_exec(self):
         tf = time.time()
         self.log("Done in %#.3gs." % (tf-self.t0))
+        self.read_output()
+        self.clean_up()
+        try: 
+            self.callback(self.result)
+        except TypeError:
+            pass
+    
+    def read_output(self):
         output_path = os.path.join(self.working_dir, self.output_file)
         try:
             self.result = numpy.genfromtxt(
                             output_path, skip_header=self.output_headers)
         except StopIteration:
             raise self.FileSystemError("Something went wrong reading output!")
-            
-        if self.clean_after:
-            self.clean_up()
-        try: 
-            self.callback(self.result)
-        except TypeError:
-            pass
     
     def clean_up(self):
-        try:
-            pass#shutil.rmtree(self.working_dir)
-        except NameError:
-            self.log("Nothing to clean -- was it ever created?")
-        except OSError:
-            self.log("Can't remove the directory. Does it exist? Permission?")
-        else:
-            self.log("Successfully cleaned up temporary files.")
+        if self.clean_after:
+            try:
+                shutil.rmtree(self.working_dir)
+            except NameError:
+                self.log("Nothing to clean -- was it ever created?")
+            except OSError:
+                self.log("Can't remove the directory. Does it exist? Permission?")
+            else:
+                self.log("Successfully cleaned up temporary files.")
     
     class FileSystemError(Exception): pass
 

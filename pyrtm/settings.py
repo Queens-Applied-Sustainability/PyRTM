@@ -32,9 +32,21 @@ default_config = {
     'time': 14.0, # GMT decimal hours
     'latitude': 44,
     'longitude': 283.7,
+    'altitude': 0,
+    'surface': 'vegetation',
     
+    'atmosphere': 'mid-latitude summer',
     'temperature': 15,
+    'pressure': 1013.250,
     'relative_humidity': 35,
+    'carbon_dioxide': 390,
+    'pressure': 1013.250,
+    
+    'aerosol_optical_depth': 0.08,
+    'angstroms_exponent': 1.1977,
+    'aerosol_asymmetry': 0.6,
+    
+    'cloud': 0,
     
     'lower_limit': 0.28,
     'upper_limit': 2.5,
@@ -71,7 +83,7 @@ class translate_smarts(utils._Translation):
             # Card 7
             'qCO2': 390, # ppm CO2
             # Card 8 Mode USER
-            'ALPHA1': 1.4, 'ALPHA2': 1.4, 'OMEGL': 0.8, 'GG': 0.8,
+            'ALPHA1': 1.4, 'ALPHA2': 1.4, 'OMEGL': 0.8, 'GG': 0.7,
             # Card 9 Mode 1
             'BETA': 0.08,
             # Card 11
@@ -80,13 +92,20 @@ class translate_smarts(utils._Translation):
             'WPMN': 280, 'WPMX': 4000, 'INTVL': 2,
             # Card 17 Mode 3
             'YEAR': 2012, 'MONTH': 6, 'DAY': 14, 'HOUR': 12,
-            'LATIT': 44, 'LONGIT': -73, 'ZONE': -5,
+            'LATIT': 44, 'LONGIT': -73, 'ZONE': 0,
         }
         for key, val in foreign.iteritems():
             native.update(getattr(self, key)(val))
         return native
     
-    _months = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365]
+    _surfaces = {#FIXME choices are fairly arbitrary
+                 'snow': 3,
+                 'clear water': 2,
+                 'lake water': 35,
+                 'sea water': 35,
+                 'sand': 6,
+                 'vegetation': 17,
+                 'ocean water': 35}
     
     _atmospheres = {'tropical': 'TRL',
                     'mid-latitude summer': 'MLS',
@@ -94,21 +113,6 @@ class translate_smarts(utils._Translation):
                     'sub-arctic summer': 'SAS',
                     'sub-arctic winter': 'SAW',
                     'us62': 'USSA'}
-                    
-    _aerosols = {'rural': 'S&F_RURAL',
-                 'urban': 'S&F_URBAN',
-                 'maritime': 'S&F_MARIT',
-                 'tripospheric': 'S&F_TROPO',
-                 'continental': 'SRA_CONTL',
-                 'urban': 'SRA_URBAN',
-                 'maritime': 'SRA_MARIT',
-                 'Braslau & Dave C': 'B&D_C',
-                 'Braslau & Dave C1': 'B&D_c1',
-                 'desert': 'DESERT_MIN',
-                 'crazy desert': 'DESERT_MAX',
-                 'custom': 'USER',
-                 # FIXME ...
-                 'background stratospheric': 'B&D_C'}
     
     description = lambda self, val: {'COMNT': "_".join(val[:64].split())}
     longitude = lambda self, val: {'LONGIT': val}
@@ -116,18 +120,23 @@ class translate_smarts(utils._Translation):
     altitude = lambda self, val: {'ALTIT': val}
     height = lambda self, val: {'HEIGHT': val}
     year = lambda self, val: {'YEAR': val}
-    day_of_year = lambda self, val: {
-        # TODO: Move to utilities and unit test
-        'MONTH': min(i for i, m in enumerate(self._months) if m+1 > val),
-        'DAY': min(val-m for m in self._months if val-m > 0)
-    }
+    day_of_year = lambda self, val: utils.day_to_month_day(val)
     time = lambda self, val: {'HOUR': val}
     season = lambda self, val: {'SEASON': val}  # TODO calculate it?
+    surface = lambda self, val: {'IALBDX': self._surfaces.get(val)}
     
     atmosphere = lambda self, val: {'ATMOS': self._atmospheres.get(val)}
     #aerosols = lambda self, val: {'AEROS': self._aerosols.get(val)}
     temperature = lambda self, val: {} # FIXME
+    pressure = lambda self, val: {'SPR': val}
     relative_humidity = lambda self, val: {'RH': val}
+    carbon_dioxide = lambda self, val: {'qCO2': 390}
+    
+    aerosol_optical_depth = lambda self, val: {'BETA': val}
+    angstroms_exponent = lambda self, val: {'ALPHA1': val, 'ALPHA2': val}
+    aerosol_asymmetry = lambda self, val: {'GG': val}
+    
+    cloud = lambda self, val: {}
     
     lower_limit = lambda self, val: {'WLMN': val*1000, 'WPMN': val*1000}
     upper_limit = lambda self, val: {'WLMX': val*1000, 'WPMX': val*1000}
@@ -154,12 +163,6 @@ class translate_sbdart(utils._Translation):
                     'sub-arctic winter': 5,
                     'us62': 6}
     
-    _aerosols = {'no aerosol': 0,
-                 'background stratospheric': 1,
-                 'aged volcanic': 2,
-                 'fresh volcanic': 3,
-                 'meteor dust': 4}
-    
     _outputs = {'none': 0, 'per wavelength': 1}
     
     description = lambda self, val: {}
@@ -170,15 +173,22 @@ class translate_sbdart(utils._Translation):
     day_of_year = lambda self, val: {'IDAY': val}
     time = lambda self, val: {'TIME': val}
     
-    surface_albedo = lambda self, val: {'ISALB': self._surfaces.get(val)}
-    surface_elevation = lambda self, val: {'ZPRES': val}
+    surface = lambda self, val: {'ISALB': self._surfaces.get(val)}
+    altitude = lambda self, val: {}#'ZPRES': val} only used for pressure
     
     atmosphere = lambda self, val: {'IDATM': self._atmospheres.get(val)}
     temperature = lambda self, val: {} # FIXME
+    pressure = lambda self, val: {'PBAR': val}
     relative_humidity = lambda self, val: {
         'UW': utils.rh_to_water(val, 15)} # FIXME self.temperature)}
-    cloud_altitude = lambda self, val: {'ZCLOUD': val} # FIXME?
-    cloud_optical_depth = lambda self, val: {'TCLOUD': val} # FIXME?
+    carbon_dioxide = lambda self, val: {'XCO2': val}
+    aerosol_optical_depth = lambda self, val: {'TAERST': val}
+    angstroms_exponent = lambda self, val: {'ABAER': val}
+    aerosol_asymmetry = lambda self, val: {'GBAER': val}
+    
+    cloud = lambda self, val: {'ZCLOUD': 6, 'TCLOUD': val}
+    #cloud_altitude = lambda self, val: {'ZCLOUD': val} # FIXME?
+    #cloud_optical_depth = lambda self, val: {'TCLOUD': val} # FIXME?
     
     #aersosols = lambda self, val: {'JAER': self._aerosols.get(val)}
     # TBAER is what we are itterating, with either rural or urban

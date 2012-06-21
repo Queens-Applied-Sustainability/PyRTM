@@ -35,15 +35,6 @@ def smarts_cards(self, sconf):
     """
     Format the SMARTS input file.
     
-    Input parameters available in this version:
-    
-     * Card 2, mode 1: SPR, ALTIT, HEIGHT -- surface pressure (in mb), altitude
-       of surface (km), and height above surface (km)
-    
-     * Card 3, mode 0: 
-     
-        TODO: Finish this and actually implement what is documented as being
-              implemented...
     
     SMARTS input files are a sequence of lines representing punch-card inputs.
     
@@ -118,8 +109,8 @@ def smarts_cards(self, sconf):
     # Card 12
     card_print(2, '12 IPRT')
     card_print('%s %s %s' % (sconf['WPMN'], sconf['WPMX'], sconf['INTVL']))
-    card_print('16')
-    card_print('2 3 4 5 11 15 16 17 18 19 20 27 28 29 30 31')
+    card_print('17')
+    card_print('2 3 4 5 6 11 15 16 17 18 19 20 27 28 29 30 31')
     
     # Card 13
     card_print(0, '13 ICIRC')
@@ -381,6 +372,12 @@ def rh_to_water(rel_humid, temp):
 
     return w
 
-
-
+def day_to_month_day(doy):
+    """Convert day of year into month and day of month."""
+    month_offs = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365]
+    
+    month = min(i for i, m in enumerate(month_offs) if m+1 > doy)
+    day = min(doy-m for m in month_offs if doy-m > 0)
+    
+    return {'MONTH': month, 'DAY': day}
 
