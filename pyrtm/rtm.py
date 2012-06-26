@@ -35,7 +35,7 @@ import settings
 import utils
 import pysmarts
 
-_mod_dir = os.path.dirname(__file__)
+_mod_dir = os.path.abspath(os.path.dirname(__file__))
 
 class _RTM(dict):
     """
