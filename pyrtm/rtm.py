@@ -33,7 +33,9 @@ import time
 
 import settings
 import utils
+import pysmarts
 
+_mod_dir = os.path.dirname(__file__)
 
 class _RTM(dict):
     """
@@ -42,17 +44,14 @@ class _RTM(dict):
     __metaclass__ = abc.ABCMeta
     
     name = None         # How shall I identify myself?
-    executable = None   # What is my executable called?
-    bin_path = None     # What is the path to my binary folder?
-    resources = []      # What other important items are in my binary folder?
+    resources = []      # What other important items do I need?
+    resource_path = []
     input_file = None   # What is the name of the file I read for input?
     input_translator = None # Who can I call to get the config in my language?
     input_generator = None  # Who can format the config into something I read?
     output_file = None  # To where shall/do I write my output?
     output_extra = []   # What other extra files do I write?
     output_headers = None   # How many garbage lines to I produce?
-    exe = None          # What command makes me go?
-    my_dir = '/home/phil/PyRTM' # FIXME FIXME FIXME FIXME ugly ugly ugly
     clean_after = True  # Shall I erase the temporary directory I created? 
     
     def __init__(self, d={}, *args, **kwargs):
@@ -81,10 +80,10 @@ class _RTM(dict):
         self.working_dir = tempfile.mkdtemp(suffix=self.name)
         # symbolically link to the executable and resources
         self.log("Linking", no_break=True)
-        for resource in [self.executable] + self.resources:
+        for resource in self.resources:
             try:
                 self.log("%s" % resource, plain=True, no_break=True)
-                os.symlink(os.path.join(self.my_dir, self.bin_path, resource),
+                os.symlink(os.path.join(_mod_dir, self.resource_path, resource),
                            os.path.join(self.working_dir, resource))
             except OSError:
                 raise self.FileSystemError("Huh. Can't make some symlinks "\
@@ -98,17 +97,20 @@ class _RTM(dict):
         self.setup_working_dir()
         self._write_input_file()
         self._t0 = time.time()
-        utils.popenAndCall(self.post_exec, self.exe, shell=True,
-                                                    cwd=self.working_dir)
-        self.log("Running...")
+        # change to cwd
+        cwd = os.getcwd()
+        os.chdir(self.working_dir)
+        # run
+        pysmarts.smarts()
+        # change back
+        os.chdir(cwd)
     
     def get(self, newconfig = {}):
         self.update(newconfig)
         self.setup_working_dir()
         self._write_input_file()
         self._t0 = time.time()
-        proc = subprocess.Popen(self.exe, shell=True, cwd=self.working_dir)
-        proc.wait()
+        #run
         self.t = time.time() - self._t0
         self.log("Done in %#.3gs." % self.t)
         self.read_output()
@@ -152,28 +154,23 @@ class _RTM(dict):
 
 class SMARTS(_RTM):
     name = 'SMARTS'
-    bin_path = os.path.join('bin', 'smarts')
-    executable = 'smarts295'
     resources = ['Albedo', 'CIE_data', 'Gases', 'Solar']
+    resource_path = os.path.join('data', 'smarts')
     input_file = 'smarts295.inp.txt'
     config_translator = settings.translate_smarts
     input_generator = utils.smarts_cards
     output_file = 'smarts295.ext.txt'
     output_headers = 1
     output_extra = ['log.txt', 'smarts295.out.txt']
-    exe = './%s > log.txt' % executable
 
 
 class SBdart(_RTM):
     name = 'SBdart'
-    bin_path = os.path.join('bin', 'sbdart')
-    executable = 'drtx'
     input_file = 'INPUT'
     config_translator = settings.translate_sbdart
     input_generator = utils.Namelist('INPUT')
     output_file = 'OUTPUT'
     output_headers = 3
-    exe = './%s > %s' % (executable, output_file)
     
     def read_output(self):
         files = os.listdir(self.working_dir)
