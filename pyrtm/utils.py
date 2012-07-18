@@ -109,8 +109,8 @@ def smarts_cards(self, sconf):
     # Card 12
     card_print(2, '12 IPRT')
     card_print('%s %s %s' % (sconf['WPMN'], sconf['WPMX'], sconf['INTVL']))
-    card_print('17')
-    card_print('2 3 4 5 6 11 15 16 17 18 19 20 27 28 29 30 31')
+    card_print('1')
+    card_print('2') # USING 2 For integration
     
     # Card 13
     card_print(0, '13 ICIRC')
@@ -205,11 +205,11 @@ class Namelist(dict):
         self.header = block
     
     def __repr__(self):
-        out = '$%s\n' % self.header
+        out = '&%s\n' % self.header
         fvals = (" %s = %s" %
                     (key, self.fval(val)) for key, val in self.items())
-        out += ',\n'.join(fvals)
-        out += '%s$END' % ('\n' if bool(self.items()) else '')
+        out += '\n'.join(fvals)
+        out += '%s/\n' % ('\n' if bool(self.items()) else '')
         return out
     
     def __call__(self, newstuff=None):

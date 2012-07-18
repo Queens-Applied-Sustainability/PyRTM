@@ -24,6 +24,7 @@
 import abc
 import numpy
 import os
+import sys
 import re
 import shutil
 import subprocess
@@ -34,6 +35,7 @@ import time
 import settings
 import utils
 import pysmarts
+import pysbdart
 
 _mod_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -44,6 +46,7 @@ class _RTM(dict):
     __metaclass__ = abc.ABCMeta
     
     name = None         # How shall I identify myself?
+    rtm = None 
     resources = []      # What other important items do I need?
     resource_path = []
     input_file = None   # What is the name of the file I read for input?
@@ -52,7 +55,7 @@ class _RTM(dict):
     output_file = None  # To where shall/do I write my output?
     output_extra = []   # What other extra files do I write?
     output_headers = None   # How many garbage lines to I produce?
-    clean_after = True  # Shall I erase the temporary directory I created? 
+    clean_after = True  # Shall I erase the temporary directory I created?
     
     def __init__(self, d={}, *args, **kwargs):
         """
@@ -79,75 +82,59 @@ class _RTM(dict):
     def setup_working_dir(self):
         self.working_dir = tempfile.mkdtemp(suffix=self.name)
         # symbolically link to the executable and resources
-        self.log("Linking", no_break=True)
-        for resource in self.resources:
-            try:
-                self.log("%s" % resource, plain=True, no_break=True)
-                os.symlink(os.path.join(_mod_dir, self.resource_path, resource),
-                           os.path.join(self.working_dir, resource))
-            except OSError:
-                raise self.FileSystemError("Huh. Can't make some symlinks "\
-                    "that I need in order to work. Maybe in a future version "\
-                    "I'll be SMARTS enough to fall back to something...")
-        self.log(plain=True) # clear the line \n
+        if self.resources:
+            self.log("Linking", no_break=True)
+            for resource in self.resources:
+                try:
+                    self.log("%s" % resource, plain=True, no_break=True)
+                    os.symlink(os.path.join(_mod_dir, self.resource_path, resource),
+                               os.path.join(self.working_dir, resource))
+                except OSError:
+                    raise self.FileSystemError("Huh. Can't make some symlinks "\
+                        "that I need in order to work. Maybe in a future version "\
+                        "I'll be SMARTS enough to fall back to something...")
+            self.log(plain=True) # clear the line \n
     
-    def go(self, callback=None, newconfig={}):
-        self.callback = callback
+    def get(self, newconfig = {}, raw=False):
         self.update(newconfig)
         self.setup_working_dir()
-        self._write_input_file()
-        self._t0 = time.time()
-        # change to cwd
         cwd = os.getcwd()
         os.chdir(self.working_dir)
-        # run
-        pysmarts.smarts()
-        # change back
-        os.chdir(cwd)
-    
-    def get(self, newconfig = {}):
-        self.update(newconfig)
-        self.setup_working_dir()
         self._write_input_file()
         self._t0 = time.time()
-        #run
+        self.rtm()
         self.t = time.time() - self._t0
         self.log("Done in %#.3gs." % self.t)
         self.read_output()
+        os.chdir(cwd)
         self.clean_up()
-        return self.result
-    
-    def post_exec(self):
-        self.t = time.time() - self._t0
-        self.log("Done in %#.3gs." % self.t)
-        self.read_output()
-        self.clean_up()
-        try: 
-            self.callback(self.result)
-        except TypeError:
-            pass
+        if raw:
+            return self.result
+        return self.standardized()
     
     def read_output(self):
         output_path = os.path.join(self.working_dir, self.output_file)
         try:
-            rtm_result = numpy.genfromtxt(
+            self.result = numpy.genfromtxt(
                             output_path, skip_header=self.output_headers)
         except StopIteration:
             raise self.FileSystemError("Something went wrong reading output!")
-        else:
-            self.result = {'description': self['description'],
-                           'result': rtm_result}
     
     def clean_up(self):
+        return
         if self.clean_after:
             try:
                 shutil.rmtree(self.working_dir)
             except NameError:
                 self.log("Nothing to clean -- was it ever created?")
             except OSError:
-                self.log("Can't remove the directory. Does it exist? Permission?")
+                self.log("Can't remove the directory. Does it exist?"      
+                                                    " Do you have permission?")
             else:
                 self.log("Successfully cleaned up temporary files.")
+    
+    def standardized(self):
+        raise NotImplementedError("Subclass and implement me!");
     
     class FileSystemError(Exception): pass
 
@@ -162,6 +149,22 @@ class SMARTS(_RTM):
     output_file = 'smarts295.ext.txt'
     output_headers = 1
     output_extra = ['log.txt', 'smarts295.out.txt']
+    
+    def rtm(self):
+        """
+        SBdart writes its output to the C standard input, so we need to
+        set ourselves up to capture that.
+        """
+        STANDARD_OUT = 1
+        outfile = os.open("blah", os.O_RDWR|os.O_CREAT)
+        stdout = os.dup(STANDARD_OUT)
+        os.dup2(outfile, STANDARD_OUT)
+        pysmarts.smarts()
+        os.dup2(stdout, STANDARD_OUT)
+        os.close(outfile)
+    
+    def standardized(self):
+        return numpy.array([self.result[:, 0]/1000, self.result[:, 1]*1000])
 
 
 class SBdart(_RTM):
@@ -169,8 +172,21 @@ class SBdart(_RTM):
     input_file = 'INPUT'
     config_translator = settings.translate_sbdart
     input_generator = utils.Namelist('INPUT')
-    output_file = 'OUTPUT'
+    output_file = 'OUTPUT.dat'
     output_headers = 3
+    
+    def rtm(self):
+        """
+        SBdart writes its output to the C standard input, so we need to
+        set ourselves up to capture that.
+        """
+        STANDARD_OUT = 1
+        outfile = os.open(self.output_file, os.O_RDWR|os.O_CREAT)
+        stdout = os.dup(STANDARD_OUT)
+        os.dup2(outfile, STANDARD_OUT)
+        pysbdart.go()
+        os.dup2(stdout, STANDARD_OUT)
+        os.close(outfile)
     
     def read_output(self):
         files = os.listdir(self.working_dir)
@@ -184,6 +200,9 @@ class SBdart(_RTM):
                 warn_file.close()
         
         return _RTM.read_output(self)
+        
+    def standardized(self):
+        return numpy.array([self.result[:, 0], self.result[:, 5]])
 
 
 def All(*args, **kwargs):

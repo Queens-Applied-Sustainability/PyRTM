@@ -30,13 +30,13 @@ default_config = {
 
     'day_of_year': 103,
     'season': 'SUMMER',
-    'time': 17.0, # GMT decimal hours
+    'time': 17, # GMT decimal hours
     'latitude': 44,
     'longitude': 283.7,
     'altitude': 0,
     'surface': 'vegetation',
     
-    'atmosphere': 'mid-latitude summer',
+    'atmosphere': 'sub-arctic summer',
     'average_daily_temperature': 15,
     'temperature': 15,
     'pressure': 1013.250,
@@ -53,7 +53,7 @@ default_config = {
     
     'lower_limit': 0.28,
     'upper_limit': 2.5,
-    
+    'resolution': 0.01,
     'output': 'per wavelength',
     
     #'precipitable water': 0.5,
@@ -161,7 +161,7 @@ class translate_sbdart(utils._Translation):
                     'sub-arctic winter': 5,
                     'us62': 6}
     
-    _outputs = {'none': 0, 'per wavelength': 1}
+    _outputs = {'none': 0, 'per wavelength': 1, 'integrated': 10}
     
     description = lambda self, val: {}
     
