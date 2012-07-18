@@ -121,7 +121,6 @@ class _RTM(dict):
             raise self.FileSystemError("Something went wrong reading output!")
     
     def clean_up(self):
-        return
         if self.clean_after:
             try:
                 shutil.rmtree(self.working_dir)
