@@ -39,6 +39,10 @@ import pysbdart
 
 _mod_dir = os.path.abspath(os.path.dirname(__file__))
 
+class _Logger(object):
+    def __call__(self, *args, **kwargs):
+        pass
+
 class _RTM(dict):
     """
     Abstract class describing interactions with RTM applications.
@@ -55,9 +59,8 @@ class _RTM(dict):
     output_file = None  # To where shall/do I write my output?
     output_extra = []   # What other extra files do I write?
     output_headers = None   # How many garbage lines to I produce?
-    clean_after = True  # Shall I erase the temporary directory I created?
     
-    def __init__(self, d={}, *args, **kwargs):
+    def __init__(self, d={}, cleanup=True, *args, **kwargs):
         """
         Create default configuration and set up logger.
         
@@ -67,7 +70,9 @@ class _RTM(dict):
         default_d.update(d)
         super(_RTM, self).__init__(default_d, *args, **kwargs)
         self.result = None
-        self.log = utils.print_brander(self.name + " " + self['description'])
+        #self.log = utils.print_brander(self.name + " " + self['description'])
+        self.log = _Logger()
+        self.clean_after = cleanup
     
     def _write_input_file(self):
         native_config = self.config_translator(self)

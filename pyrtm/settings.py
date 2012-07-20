@@ -27,7 +27,10 @@ import utils
 
 default_config = {
     'description': 'Hello World -- Default Config',
-
+    
+    'solar_constant': 1367,
+    
+    'year': 2012,
     'day_of_year': 103,
     'season': 'SUMMER',
     'time': 17, # GMT decimal hours
@@ -60,7 +63,6 @@ default_config = {
     #'ozone': 0.324,
     #'altitude'
     #'tropospheric nitrogen': '???',
-    #'surface pressure': '???',
     
 }
 
@@ -79,12 +81,9 @@ class translate_smarts(utils._Translation):
         native = {
             # Card 2 Mode 1
             'HEIGHT': 0,
-            # Card 11
-            'SOLARC': 1367,
             # Card 12 Mode 2
             'INTVL': 2,
             # Card 17 Mode 3
-            'YEAR': 2012,
             'ZONE': 0,
         }
         for key, val in foreign.iteritems():
@@ -108,6 +107,9 @@ class translate_smarts(utils._Translation):
                     'us62': 'USSA'}
     
     description = lambda self, val: {'COMNT': "_".join(val[:64].split())}
+    
+    solar_constant = lambda self, val: {'SOLARC': val}
+    
     longitude = lambda self, val: {'LONGIT': val}
     latitude = lambda self, val: {'LATIT': val}
     altitude = lambda self, val: {'ALTIT': val}
@@ -118,11 +120,10 @@ class translate_smarts(utils._Translation):
         'DAY': utils.day_to_month_day(val)['DAY'],
         }
     time = lambda self, val: {'HOUR': val}
-    season = lambda self, val: {'SEASON': val}  # TODO calculate it?
+    season = lambda self, val: {'SEASON': val}  # TODO.... auto-set?
     surface = lambda self, val: {'IALBDX': self._surfaces.get(val)}
     
     atmosphere = lambda self, val: {'ATMOS': self._atmospheres.get(val)}
-    #aerosols = lambda self, val: {'AEROS': self._aerosols.get(val)}
     average_daily_temperature = lambda self, val: {'TAIR': val}
     temperature = lambda self, val: {'TDAY': val}
     pressure = lambda self, val: {'SPR': val}
@@ -165,12 +166,15 @@ class translate_sbdart(utils._Translation):
     
     description = lambda self, val: {}
     
+    solar_constant = lambda self, val: {} #TODO: do something with solfac?
+    
     latitude = lambda self, val: {'ALAT': val}
     longitude = lambda self, val: {'ALON': val}
     altitude = lambda self, val: {'ZOUT': [val, 100]}
     day_of_year = lambda self, val: {'IDAY': val}
     season = lambda self, val: {}  # not supported
     time = lambda self, val: {'TIME': val}
+    year = lambda self, val: {} # not supported
     
     surface = lambda self, val: {'ISALB': self._surfaces.get(val)}
     altitude = lambda self, val: {}#'ZPRES': val} only used for pressure
@@ -183,10 +187,10 @@ class translate_sbdart(utils._Translation):
         'UW': utils.rh_to_water(val, 15)} # FIXME self.temperature)}
     carbon_dioxide = lambda self, val: {'XCO2': val}
     
-    single_scattering_albedo = lambda self, val: {'WBAER': val}
-    aerosol_optical_depth = lambda self, val: {'TAERST': val}
-    angstroms_exponent = lambda self, val: {'ABAER': val}
-    aerosol_asymmetry = lambda self, val: {'GBAER': val}
+    single_scattering_albedo = lambda self, val: {}#defaulted'WBAER': val}
+    aerosol_optical_depth = lambda self, val: {'TBAER': val, 'IAER': 2}
+    angstroms_exponent = lambda self, val: {}#defaulted'ABAER': val}
+    aerosol_asymmetry = lambda self, val: {}#defaulted'GBAER': val}
     
     cloud = lambda self, val: {'ZCLOUD': 6, 'TCLOUD': val}
     #cloud_altitude = lambda self, val: {'ZCLOUD': val} # FIXME?

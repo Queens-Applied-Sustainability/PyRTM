@@ -32,7 +32,7 @@ from numpy import exp, power, cos, pi
 import settings
 
 def smarts_cards(self, sconf):
-    """
+    """ OZONE
     Format the SMARTS input file.
     
     
@@ -56,7 +56,7 @@ def smarts_cards(self, sconf):
     http://rredc.nrel.gov/solar/models/SMARTS/relatedrefs/SMARTS295_Users_Manual_Linux.pdf
     """
     
-    annoying = {'content': ''}
+    annoying = {'content': ''} # MUTABLE! Can't just use string. grr.
     def card_print(something, comment=None, no_break=False):
         annoying['content'] += str(something)
         if comment:
@@ -74,13 +74,13 @@ def smarts_cards(self, sconf):
     # CARD 3
     card_print(0, '3 IATMOS mode select')
     card_print('%s %s \'%s\' %s' % (sconf['TAIR'], sconf['RH'],
-                                    sconf['SEASON'], sconf['TDAY'])) # FIXME
+                                    sconf['SEASON'], sconf['TDAY']))
     
     # Card 4
     card_print(2, '4 IH2O mode select')
     
     # Card 5
-    card_print(1, '5 IO3 mode select') # use default ozone FIXME
+    card_print(1, '5 IO3 mode select') # use default ozone FIXME why?
     
     # Card 6
     card_print(1, '6 IGAS') # use defaults	
@@ -110,7 +110,7 @@ def smarts_cards(self, sconf):
     card_print(2, '12 IPRT')
     card_print('%s %s %s' % (sconf['WPMN'], sconf['WPMX'], sconf['INTVL']))
     card_print('1')
-    card_print('2') # USING 2 For integration
+    card_print('4') # USING 4 For integration
     
     # Card 13
     card_print(0, '13 ICIRC')
