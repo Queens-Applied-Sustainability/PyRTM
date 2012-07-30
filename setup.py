@@ -52,7 +52,7 @@ class CompileAndInstall(DistutilsInstall):
 
 setup(
     name='RTM',
-    version='0.0.7',
+    version='0.0.11',
     author='Philip Schleihauf',
     author_email='uniphil@gmail.com',
     license='license.txt', #????
@@ -60,11 +60,14 @@ setup(
     long_description=open('README.txt').read(),
     #url='https://github.com/uniphil/FMM',
     packages=['rtm'],
+    #package_data={'':['*.dat', '*.DAT']},
+    include_package_data=True,
     scripts=[
         'bin/sbdart/sbdart',
         'bin/smarts/smarts295',
         ],
-    install_requires=['numpy'],
+    
+    #install_requires=['numpy'],
     cmdclass={'install': CompileAndInstall},
     )
     
