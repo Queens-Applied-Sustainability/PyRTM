@@ -52,7 +52,7 @@ class CompileAndInstall(DistutilsInstall):
 
 setup(
     name='RTM',
-    version='0.0.11',
+    version='0.0.12',
     author='Philip Schleihauf',
     author_email='uniphil@gmail.com',
     license='license.txt', #????

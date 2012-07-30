@@ -53,7 +53,10 @@ def smarts(atm={}, cleanup=True):
                 raise SMARTSError("Execution failed with code %d. stderr:\n%s"
                     % (code, err))
             smout = working.get(output_file)
-            raw = numpy.genfromtxt(smout, skip_header=output_headers)
+            try:
+                raw = numpy.genfromtxt(smout, skip_header=output_headers)
+            except StopIteration:
+                raise SMARTSError("Couldn't read output")
             return numpy.array([raw[:,0]/1000, raw[:,1]*1000])
     return runner
 
