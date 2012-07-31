@@ -63,6 +63,7 @@ class SMARTS(dict):
                 raw = numpy.genfromtxt(smout, skip_header=output_headers)
             except StopIteration:
                 raise SMARTSError("Couldn't read output")
+            return numpy.array([raw[:,0]/1000, raw[:,1]*1000])
         
 
 def smarts(atm={}, cleanup=True):
