@@ -38,7 +38,35 @@ output_headers = 1
 
 class SMARTSError(_rtm.RTMError): pass
 
+
+class SMARTS(dict):
+    """picklable object for calling smarts
+    intended to be used as you would the factory function version"""
+    def __init__(self, d={}, cleanup=True, *args, **kwargs):
+        self.cleanup = cleanup
+        super(SMARTS, self).__init__(d, *args, **kwargs)
+    
+    def __call__(self, atm={}):
+        self.update(atm)
+        with _rtm.Working(cleanup=self.cleanup) as working:
+            working.link(resources, path=resource_path)
+            working.write(input_file, cardify(translate(self)))
+            code, err = working.run('%s > %s' % (command, output_log))
+            if code == 127:
+                raise SMARTSError("%d: SMARTS Executable not found. Did you"\
+                    " install it correctly? stderr:\n%s" % (code, err))
+            elif code != 0:
+                raise SMARTSError("Execution failed with code %d. stderr:\n%s"
+                    % (code, err))
+            smout = working.get(output_file)
+            try:
+                raw = numpy.genfromtxt(smout, skip_header=output_headers)
+            except StopIteration:
+                raise SMARTSError("Couldn't read output")
+        
+
 def smarts(atm={}, cleanup=True):
+    """WARNING: not picklable"""
     myatm = dict(atm)
     def runner(atm={}):
         myatm.update(atm)
@@ -61,6 +89,7 @@ def smarts(atm={}, cleanup=True):
     return runner
 
 def picklable(atm={}, *args, **kwargs):
+    """just the function, nothing fancy"""
     m = smarts(*args, **kwargs)
     return m(atm)
 

@@ -35,7 +35,39 @@ header_lines = 3
 
 class SBdartError(_rtm.RTMError): pass
 
+
+class SBdart(dict):
+    """picklable object for calling sbdart
+    intended to be used as you would the factory function version"""
+    def __init__(self, d={}, cleanup=True, *args, **kwargs):
+        self.cleanup = cleanup
+        super(SBdart, self).__init__(d, *args, **kwargs)
+    
+    def __call__(self, atm={}):
+        self.update(atm)
+        with _rtm.Working(cleanup=self.cleanup) as working:
+            working.write(input_file, namelistify(translate(self)))
+            code, err = working.run('%s > %s' % (command, output_file))
+            if code == 127:
+                raise SBdartError("%d: sbdart Executable not found. Did you"\
+                    " install it correctly? stderr:\n%s" % (code, err))
+            elif "error: namelist block $INPUT not found" in err:
+                raise SBdartError("sbdart couln't read the &INPUT block."\
+                    " stderr:\n%s" % err)
+            elif code != 0:
+                raise SBdartError("Execution failed with code %d. stderr:\n%s"
+                    % (status, err))
+            sbout = working.get(output_file)
+            try:
+                raw = numpy.genfromtxt(sbout, skip_header=header_lines)
+            except StopIteration:
+                raise SBdartError("Bad output file for genfromtxt (%d header" \
+                                  " rows)." % header_lines)
+            return numpy.array([raw[:,0], raw[:,5]])
+
+
 def sbdart(atm={}, cleanup=True):
+    """WARNING: not picklable"""
     myatm = dict(atm)
     def runner(atm={}):
         myatm.update(atm)
