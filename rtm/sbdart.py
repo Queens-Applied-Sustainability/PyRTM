@@ -57,46 +57,17 @@ class SBdart(dict):
             elif code != 0:
                 raise SBdartError("Execution failed with code %d. stderr:\n%s"
                     % (status, err))
-            sbout = working.get(output_file)
+            try:
+                sbout = working.get(output_file)
+            except IOError:
+                raise SBdartError("didn't get output %s -- %s" %
+                    (output_file, err))
             try:
                 raw = numpy.genfromtxt(sbout, skip_header=header_lines)
             except StopIteration:
                 raise SBdartError("Bad output file for genfromtxt (%d header" \
-                                  " rows)." % header_lines)
+                                  " rows) -- %s" % (header_lines, err))
             return numpy.array([raw[:,0], raw[:,5]])
-
-
-def sbdart(atm={}, cleanup=True):
-    """WARNING: not picklable"""
-    myatm = dict(atm)
-    def runner(atm={}):
-        myatm.update(atm)
-        with _rtm.Working(cleanup=cleanup) as working:
-            working.write(input_file, namelistify(translate(myatm)))
-            
-            code, err = working.run('%s > %s' % (command, output_file))
-            if code == 127:
-                raise SBdartError("%d: sbdart Executable not found. Did you"\
-                    " install it correctly? stderr:\n%s" % (code, err))
-            elif "error: namelist block $INPUT not found" in err:
-                raise SBdartError("sbdart couln't read the &INPUT block."\
-                    " stderr:\n%s" % err)
-            elif code != 0:
-                raise SBdartError("Execution failed with code %d. stderr:\n%s"
-                    % (status, err))
-            
-            sbout = working.get(output_file)
-            try:
-                raw = numpy.genfromtxt(sbout, skip_header=header_lines)
-            except StopIteration:
-                raise SBdartError("Bad output file for genfromtxt (%d header" \
-                                  " rows)." % header_lines)
-            return numpy.array([raw[:,0], raw[:,5]])
-    return runner
-
-def picklable(atm={}, *args, **kwargs):
-    d = sbdart(*args, **kwargs)
-    return d(atm)
 
 
 def namelistify(params):

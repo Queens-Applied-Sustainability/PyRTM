@@ -58,41 +58,16 @@ class SMARTS(dict):
             elif code != 0:
                 raise SMARTSError("Execution failed with code %d. stderr:\n%s"
                     % (code, err))
-            smout = working.get(output_file)
+            try:
+                smout = working.get(output_file)
+            except IOError:
+                raise SMARTSError("didn't get output %s -- %s" %
+                    (output_file, err))
             try:
                 raw = numpy.genfromtxt(smout, skip_header=output_headers)
             except StopIteration:
-                raise SMARTSError("Couldn't read output")
+                raise SMARTSError("Couldn't read output -- %s" % err)
             return numpy.array([raw[:,0]/1000, raw[:,1]*1000])
-        
-
-def smarts(atm={}, cleanup=True):
-    """WARNING: not picklable"""
-    myatm = dict(atm)
-    def runner(atm={}):
-        myatm.update(atm)
-        with _rtm.Working(cleanup=cleanup) as working:
-            working.link(resources, path=resource_path)
-            working.write(input_file, cardify(translate(myatm)))
-            code, err = working.run('%s > %s' % (command, output_log))
-            if code == 127:
-                raise SMARTSError("%d: SMARTS Executable not found. Did you"\
-                    " install it correctly? stderr:\n%s" % (code, err))
-            elif code != 0:
-                raise SMARTSError("Execution failed with code %d. stderr:\n%s"
-                    % (code, err))
-            smout = working.get(output_file)
-            try:
-                raw = numpy.genfromtxt(smout, skip_header=output_headers)
-            except StopIteration:
-                raise SMARTSError("Couldn't read output")
-            return numpy.array([raw[:,0]/1000, raw[:,1]*1000])
-    return runner
-
-def picklable(atm={}, *args, **kwargs):
-    """just the function, nothing fancy"""
-    m = smarts(*args, **kwargs)
-    return m(atm)
 
 
 def cardify(params):
