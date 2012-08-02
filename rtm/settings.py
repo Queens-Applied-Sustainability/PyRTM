@@ -21,16 +21,17 @@
     along with PyRTM.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+from datetime import datetime
+from pytz import timezone
+default_time = datetime(2012, 04, 10, 12, tzinfo=timezone('EST'))
 
 defaults = {
     'description': 'Default Config',
     
     'solar_constant': 1367,
     
-    'year': 2012,
-    'day_of_year': 103,
     'season': 'SUMMER',
-    'time': 17, # GMT decimal hours
+    'time': default_time,
     'latitude': 44,
     'longitude': 283.7,
     'altitude': 0,

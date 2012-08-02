@@ -135,8 +135,6 @@ def translate(params):
     direct = {
         'latitude': 'ALAT',
         'longitude': 'ALON',
-        'day_of_year': 'IDAY',
-        'time': 'TIME',
         'pressure': 'PBAR',
         'carbon_dioxide': 'XCO2',
         'aerosol_optical_depth': 'TBAER',
@@ -147,6 +145,12 @@ def translate(params):
         }
     
     convert = {
+        'time': ((), lambda v:
+            (lambda tt: {
+                'TIME': tt.tm_hour + tt.tm_min/60. + tt.tm_sec/3600,
+                'IDAY': tt.tm_yday,
+                })(v.utctimetuple())
+            ),
         'altitude': ((), lambda v: {
             'ZOUT': [v, 50]
             }),

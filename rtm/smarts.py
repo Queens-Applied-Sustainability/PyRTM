@@ -150,7 +150,7 @@ def cardify(params):
     card_print(2, '12 IPRT')
     card_print('%s %s %s' % (params['WPMN'], params['WPMX'], params['INTVL']))
     card_print('1')
-    card_print('4') # USING 4 For integration
+    card_print('4') # using 4 For integration
     
     # Card 13
     card_print(0, '13 ICIRC')
@@ -194,8 +194,6 @@ def translate(params):
         'longitude': 'LONGIT',
         'latitude': 'LATIT',
         'altitude': 'ALTIT',
-        'year': 'YEAR',
-        'time': 'HOUR',
         'season': 'SEASON', #TODO
         'average_daily_temperature': 'TAIR',
         'temperature': 'TDAY',
@@ -212,9 +210,14 @@ def translate(params):
         'description': ((), lambda v: {
             'COMNT': "_".join(v[:64].split())
             }),
-        'day_of_year': ((), lambda v: dict(zip(
-            ['MONTH', 'DAY'], day_to_date(v)
-            ))), 
+        'time': ((), lambda v:
+            (lambda tt: {
+                'YEAR': tt.tm_year,
+                'MONTH': tt.tm_mon,
+                'DAY': tt.tm_mday,
+                'HOUR': tt.tm_hour + tt.tm_min/60. + tt.tm_sec/3600,
+                })(v.utctimetuple())
+            ), 
         'surface': ((), lambda v: {
             'IALBDX': {
                 'snow': 3,
@@ -271,14 +274,6 @@ def translate(params):
             addItem(param,val)
     
     return translated
-
-
-def day_to_date(doy):
-    """Convert day of year into month and day of month."""
-    month_offs = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365]
-    month = min(i for i, m in enumerate(month_offs) if m+1 > doy)
-    day = min(doy-m for m in month_offs if doy-m > 0)
-    return (month, day)
 
 """
 G is irradiance
