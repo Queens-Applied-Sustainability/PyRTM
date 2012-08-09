@@ -23,7 +23,6 @@
 
 import os
 import re
-import inspect
 import shutil
 import subprocess
 import tempfile
@@ -150,24 +149,6 @@ class CacheDict(dict):
     def __setitem__(self, key, value):
         self._cache_key = str(self.__hash__())
         super(CacheDict, self).__setitem__(key, value)
-
-    _ignore = [name for name, thing in inspect.getmembers(dict)]
-
-    def __getattribute__(self, attr, *args, **kwargs):
-        if (not attr.startswith('_') and not attr in self._ignore):
-            try:
-                val = self._cache[self._cache_key][attr]
-                print 'hit'
-            except KeyError:
-                val = dict.__getattribute__(self, attr)
-                try:
-                    self._cache[self._cache_key].update({attr: val})
-                except KeyError:
-                    self._cache[self._cache_key] = {}
-                print 'miss'
-        else:
-            val = dict.__getattribute__(self, attr)
-        return val
 
     def __hash__(self):
         try:
