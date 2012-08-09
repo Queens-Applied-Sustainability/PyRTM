@@ -39,29 +39,24 @@ default_out = 'out.txt'
 class SBdartError(_rtm.RTMError): pass
 
 
-class SBdart(_rtm.CacheDict):
+class SBdart(_rtm.Model):
     """
     model some radiative transfers
     """
 
-    def __init__(self, conf=None, target='.', cleanup=True, *args, **kwargs):
-        config = dict(settings.defaults) # head's up: repeated in translate
-        # breaking DRY because translate should work on its own, but this
-        # should also be complete.
-        config.update(conf or {})
-        self.target = target
-        self.cleanup = cleanup
-        super(SBdart, self).__init__(config, *args, **kwargs)
+    def raw(self, rawfile):
+        """ grab a raw file """
+        with _rtm.Working(self) as working:
+            return working.get(rawfile)
 
     def run(self, output=default_out):
         """ run sbdart """
 
-        with _rtm.Working(self.target, self) as working:
+        with _rtm.Working(self) as working:
+            full_cmd = '%s > %s' % (command, output)
             namelist = namelistify(translate(self))
             working.write(input_file, namelist)
-
-            full_cmd = '%s > %s' % (command, output)
-            code, err, rcfg = working.run(full_cmd)
+            code, err, rcfg = working.run(full_cmd, output)
 
             if code == 127:
                 raise SBdartError('%d: sbdart executable not found. '\
@@ -73,18 +68,14 @@ class SBdart(_rtm.CacheDict):
                 raise SBdartError("sbdart execution failed. Code %d, '\
                     'stderr:\n%s" % (status, err))
 
-    def raw(self, files=default_out):
-        """ grab a raw file """
-        raise NotImplementedError
-
     @property
-    def spectrum(self, output='out.global.spectrum.txt'):
+    def spectrum(self):
         """ get the global spectrum for the atmosphere """
-
         self.update({'output': 'per-wavelength'})
+        output='out.spectrum.txt'
         self.run(output=output)
 
-        with _rtm.Working(self.target, self) as working:
+        with _rtm.Working(self) as working:
             try:
                 sbout = working.get(output)
             except IOError:
@@ -117,14 +108,13 @@ class SBdart(_rtm.CacheDict):
             'upward_flux', 'direct_downward_flux')
 
         def get_irrad(col):
-            @wraps
-            def argfree():
+            def irrad():
                 dat = self.spectrum
                 return numpy.trapz(dat[col],dat['wavelength'])
-            return argfree
+            return irrad
 
         return _rtm.CallableDict({k: get_irrad(k) for k in cols})
-        
+
 
 def namelistify(config):
     """convert a dict to a fortran namelist"""

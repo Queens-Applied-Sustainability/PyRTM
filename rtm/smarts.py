@@ -39,35 +39,72 @@ output_headers = 1
 class SMARTSError(_rtm.RTMError): pass
 
 
-class SMARTS(dict):
-    """picklable object for calling smarts
-    intended to be used as you would the factory function version"""
-    def __init__(self, d={}, cleanup=True, *args, **kwargs):
-        self.cleanup = cleanup
-        super(SMARTS, self).__init__(d, *args, **kwargs)
+class SMARTS(_rtm.Model):
+    """
+    model some radiative transfers
+    """
     
-    def __call__(self, atm={}):
-        self.update(atm)
-        with _rtm.Working(cleanup=self.cleanup) as working:
+    def raw(self, rawfile):
+        """ grab a raw file """
+        with _rtm.Working(self) as working:
+            return working.get(rawfile)
+
+
+    def run(self):
+        """run smarts"""
+
+        with _rtm.Working(self) as working:
             working.link(resources, path=resource_path)
-            working.write(input_file, cardify(translate(self)))
-            code, err = working.run('%s > %s' % (command, output_log))
+            full_cmd = '%s > %s' % (command, output_log)
+            cards = cardify(translate(self))
+            working.write(input_file, cards)
+            code, err, rcfg = working.run(full_cmd, output_log)
+
             if code == 127:
                 raise SMARTSError("%d: SMARTS Executable not found. Did you"\
                     " install it correctly? stderr:\n%s" % (code, err))
             elif code != 0:
                 raise SMARTSError("Execution failed with code %d. stderr:\n%s"
                     % (code, err))
+
+    @property
+    def spectrum(self):
+        """get the global spectrum for the atmosphere"""
+        self.update({'output': 'per-wavelength'})
+        output='out.spectrum.txt'
+        self.run()
+
+        with _rtm.Working(self) as working:
             try:
                 smout = working.get(output_file)
             except IOError:
                 raise SMARTSError("didn't get output %s -- %s" %
                     (output_file, err))
             try:
-                raw = numpy.genfromtxt(smout, skip_header=output_headers)
+                model_spectrum = numpy.genfromtxt(
+                    smout, skip_header=output_headers, dtype=[
+                        ('wavelength', numpy.float64),
+                        ('global_horizontal', numpy.float64),
+                        ])
             except StopIteration:
-                raise SMARTSError("Couldn't read output -- %s" % err)
-            return numpy.array([raw[:,0]/1000, raw[:,1]*1000])
+                raise SMARTSError("Bad output file for genfromtxt (%d header" \
+                                  " rows) -- %s" % (header_lines, err))
+            model_spectrum['wavelength'] /= 1000
+            model_spectrum['global_horizontal'] *= 1000
+
+        return model_spectrum
+
+    @property
+    def irradiance(self):
+        """Get the integrated irradiance across the spectrum"""
+
+        cols = ('global_horizontal',)
+        def get_irrad(col):
+            def irrad():
+                dat = self.spectrum
+                return numpy.trapz(dat[col],dat['wavelength'])
+            return irrad
+        return _rtm.CallableDict({k: get_irrad(k) for k in cols})
 
 
 def cardify(params):

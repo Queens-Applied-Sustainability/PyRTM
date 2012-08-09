@@ -29,6 +29,7 @@ import tempfile
 import superhash
 import cPickle as pickle
 from superhash import superhash
+import settings
 
 
 MAX_FILE_CHARS = 42
@@ -52,124 +53,140 @@ def _vars_to_file(vars):
     return clean_string
 
 
-class Working(object):
-    """Get previously computed result or run rtm"""
-    def __init__(self, target, config):
-        
-        primary = _vars_to_file(config[v] for v in PRIMARY)
-        secondary = _vars_to_file(
-            getattr(config['time'], v) for v in SECONDARY)
-        rundir = _vars_to_file([superhash(config)])
+class Model(dict):
+    """The parent of what you probably use"""
 
-        path = os.path.join(target, primary, secondary, rundir)
+    def __init__(self, userconfig=None, target='.', cleanup=True, *args, **kwargs):
+        required = ['description', 'latitude', 'longitude', 'time']
+        config = dict({k: v for k, v in settings.defaults.items() if k in required})
+        config.update(userconfig or {})
+        self.target = target
+        self.cleanup = cleanup
+        super(Model, self).__init__(config, *args, **kwargs)
+
+    def __hash__(self):
+        return hash(dict.__str__(self))
+
+
+"""
+state = {
+    'dir_created': True,
+    'outfile': {cmd: res},
+    'writes': [name],
+    }
+"""
+
+
+
+class Working(object):
+    """work with the executables"""
+    def __init__(self, model):
+        
+        # set up the directory variables
+        primary = _vars_to_file(model[v] for v in PRIMARY)
+        secondary = _vars_to_file(
+            getattr(model['time'], v) for v in SECONDARY)
+        rundir = _vars_to_file([str(hash(model))])
+
+        path = os.path.join(model.target, primary, secondary, rundir)
 
         try:
-            os.makedirs(path)
-            self.cached = False
-        except OSError as err:
-            if err.errno is 17:
-                # we've already run and (hopefully) cached this
-                self.cached = True
-            else:
-                raise # some other OSError came up
+            state = model._working_state[hash(model)]
+        except AttributeError:
+            model._workings_state = {}
+        except KeyError:
+            pass
+        finally:
+            state = {'dir_created': False}
 
-        self.config = config
-        self.dir = path
-        self.runpickle = 'run.pickle'
+        if not state['dir_created']:
+            try:
+                os.makedirs(path)
+            except OSError as err:
+                if err.errno is not 17:
+                    raise
+
+            state['dir_created'] = True
+
+        self.model = model
+        self.path = path
+        self.state = state
     
     def __enter__(self):
         return self
     
     def __exit__(self, type, value, traceback):
-        """asdf"""
-        pass
+        """save state back to model"""
+        try:
+            self.model._workings_state[hash(self.model)].update(self.state)
+        except KeyError:
+            self.model._workings_state[hash(self.model)] = self.state
     
     def __str__(self):
-        return "<Working: %s>" % self.dir
+        return "<Working: %s>" % self.path
     
     def link(self, resources, path=""):
         """link some stuff in"""
         if type(resources) == str:
             resources = [resources]
-        [os.symlink(
-            os.path.join(path, resource),
-            os.path.join(self.dir, resource)
-            ) for resource in resources]
+        try:
+            [os.symlink(
+                os.path.join(path, resource),
+                os.path.join(self.path, resource)
+                ) for resource in resources]
+        except OSError as err:
+            if err.errno is not 17:
+                raise
     
     def write(self, file_name, content):
-        open(os.path.join(self.dir, file_name), 'w').write(content)
+        if file_name in self.state.get('writes', []):
+            return
+        else:
+            open(os.path.join(self.path, file_name), 'w').write(content)
+
+        if not self.state.get('writes'):
+            self.state['writes'] = [file_name]
+        else:
+            self.state['writes'].append(file_name)
+
     
-    def run(self, cmd, errfile="errorlog.txt"):
-        pkl = os.path.join(self.dir, self.runpickle)
+    def run(self, cmd, outfile, errfile=None):
 
         try:
-            out = pickle.load(open(pkl, 'rb'))
+            # first try to get the local cache
+            run_out = self.state['outfile'][cmd]
+        except KeyError:
+            self.state['outfile'] = {}
 
-        except IOError:            
-            cmd += " 2> %s" % errfile
-            p = subprocess.Popen(cmd, cwd=self.dir, shell=True)
-            p.wait()
-            err = open(os.path.join(self.dir, errfile)).read()
-            out = [p.returncode, err, self.config]
+        # no local cache, check for a pickle
+        safe_cmd = _vars_to_file([cmd])
+        errfile = errfile or 'err-%s' % outfile
+        picklename = 'run %s.pickle' % safe_cmd
+        picklepath = os.path.join(self.path, picklename)
 
-            cachefile = open(pkl, 'wb')
-            pickle.dump(out, cachefile)
-            cachefile.close()
+        try:
+            run_out = pickle.load(open(picklepath, 'rb'))
+            self.state['outfile'][cmd] = run_out
+            return run_out
+        except IOError:
+            pass
+       
+        # no pickle, so now actually run the command
+        cmd += ' 2> %s' % errfile
+        p = subprocess.Popen(cmd, cwd=self.path, shell=True)
+        p.wait()
+        err = open(os.path.join(self.path, errfile)).read()
+        run_out = [p.returncode, err, self.model]
+        self.state['outfile'][cmd] = run_out
 
-        return out
+        with open(picklepath, 'wb') as cache_pickle:
+            pickle.dump(run_out, cache_pickle)
+
+        return run_out
     
     def get(self, file_name, mode='r'):
         """all these files should be closed before finishing with Working"""
-        return open(os.path.join(self.dir, file_name), mode)
-
-
-def config_cache(func):
-    cache = {}
-    @wraps(func)
-    def wrapcache(*args, **kwargs):
-        try:
-            val = cache[config._cache_key]
-            print 'hit'
-        except KeyError:
-            print 'miss'
-            val = func(*args, **kwargs)
-            cache.update({config._cache_key: val})
-        return val
-    return wrapcache
-
-
-class CacheDict(dict):
-    """cache calculated stuff"""
-
-    def __init__(self, *args, **kwargs):
-        self._cache = {}
-        self._cache_key = None
-        self.update(*args, **kwargs)
-
-    def __setitem__(self, key, value):
-        self._cache_key = str(self.__hash__())
-        super(CacheDict, self).__setitem__(key, value)
-
-    def __hash__(self):
-        try:
-            return reduce(lambda x,y:x^y, map(hash, self.items()))
-        except TypeError:
-            return hash(str(self))
-
-    def update(self, *args, **kwargs):
-        if args:
-            if len(args) > 1:
-                raise TypeError("expected 1 argument, got %d" % len(args))
-            other = dict(args[0])
-            for key in other:
-                self[key] = other[key]
-        for key in kwargs:
-            self[key] = kwargs[key]
-
-    def setdefault(self, key, value=None):
-        if key not in self:
-            self[key] = value
-        return self[key]
+        return open(os.path.join(self.path, file_name), mode)
 
 
 class CallableDict(dict):
@@ -187,10 +204,8 @@ class CallableDict(dict):
     def __getitem__(self, key):
         try:
             val = self._cache[key]
-            print 'cache hit'
         except KeyError:
-            print 'cache miss'
-            val = super(CallableDict, self).__getitem__(key)()
+            val = dict.__getitem__(self, key)()
             self._cache[key] = val
         return val
 
