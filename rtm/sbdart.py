@@ -23,6 +23,7 @@
 
 from collections import Iterable
 from itertools import repeat
+from functools import wraps
 import numpy
     
 
@@ -38,9 +39,9 @@ default_out = 'out.txt'
 class SBdartError(_rtm.RTMError): pass
 
 
-class SBdart(dict):
+class SBdart(_rtm.CacheDict):
     """
-    model some radiative transfers!
+    model some radiative transfers
     """
 
     def __init__(self, conf=None, target='.', cleanup=True, *args, **kwargs):
@@ -116,16 +117,14 @@ class SBdart(dict):
             'upward_flux', 'direct_downward_flux')
 
         def get_irrad(col):
+            @wraps
             def argfree():
                 dat = self.spectrum
                 return numpy.trapz(dat[col],dat['wavelength'])
             return argfree
 
         return _rtm.CallableDict({k: get_irrad(k) for k in cols})
-
-
-
-
+        
 
 def namelistify(config):
     """convert a dict to a fortran namelist"""

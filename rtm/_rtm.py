@@ -23,6 +23,7 @@
 
 import os
 import re
+import inspect
 import shutil
 import subprocess
 import tempfile
@@ -123,15 +124,50 @@ class Working(object):
         return open(os.path.join(self.dir, file_name), mode)
 
 
+def config_cache(func):
+    cache = {}
+    @wraps(func)
+    def wrapcache(*args, **kwargs):
+        try:
+            val = cache[config._cache_key]
+            print 'hit'
+        except KeyError:
+            print 'miss'
+            val = func(*args, **kwargs)
+            cache.update({config._cache_key: val})
+        return val
+    return wrapcache
+
+
 class CacheDict(dict):
     """cache calculated stuff"""
 
     def __init__(self, *args, **kwargs):
+        self._cache = {}
+        self._cache_key = None
         self.update(*args, **kwargs)
 
     def __setitem__(self, key, value):
-        self._cache_key = self.__hash__()
+        self._cache_key = str(self.__hash__())
         super(CacheDict, self).__setitem__(key, value)
+
+    _ignore = [name for name, thing in inspect.getmembers(dict)]
+
+    def __getattribute__(self, attr, *args, **kwargs):
+        if (not attr.startswith('_') and not attr in self._ignore):
+            try:
+                val = self._cache[self._cache_key][attr]
+                print 'hit'
+            except KeyError:
+                val = dict.__getattribute__(self, attr)
+                try:
+                    self._cache[self._cache_key].update({attr: val})
+                except KeyError:
+                    self._cache[self._cache_key] = {}
+                print 'miss'
+        else:
+            val = dict.__getattribute__(self, attr)
+        return val
 
     def __hash__(self):
         try:
