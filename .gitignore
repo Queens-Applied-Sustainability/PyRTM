@@ -34,3 +34,6 @@ pip-log.txt
 
 # I/O Files
 data/*
+
+# nautilus hidden rules
+.hidden
