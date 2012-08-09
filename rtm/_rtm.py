@@ -22,32 +22,75 @@
 """
 
 import os
+import re
 import shutil
 import subprocess
 import tempfile
+import superhash
+import cPickle as pickle
+from superhash import superhash
+
+
+MAX_FILE_CHARS = 42
+CACHE_DIR = 'cached'
+PRIMARY = ['description', 'longitude', 'latitude']
+SECONDARY = ['year', 'month']
+
 
 class RTMError(Exception): pass
 
-class Working():
-    """Make a unique temporary working directory in which to run the RTM"""
-    def __init__(self, cleanup=True):
-        """Create our temporary directory and cd into it"""
-        self.dir = tempfile.mkdtemp(suffix='_RTM')
-        self.cleanup = cleanup
+
+def _vars_to_file(vars):
+    """Return a safe string to be used as a file or directory name"""
+    clean_vars = [re.sub('[^a-zA-Z0-9_:]', '.', str(v)) for v in vars]
+    clean_string = '-'.join(clean_vars)
+    if clean_string.startswith('.'):
+        clean_string = 'c' + clean_string
+    if len(clean_string) > MAX_FILE_CHARS:
+        # name was too long; use hash instead hash instead.
+        return str(clean_string.__hash__())
+    return clean_string
+
+
+class Working(object):
+    """Get previously computed result or run rtm"""
+    def __init__(self, target, config):
+        
+        primary = _vars_to_file(config[v] for v in PRIMARY)
+        secondary = _vars_to_file(
+            getattr(config['time'], v) for v in SECONDARY)
+        rundir = _vars_to_file([superhash(config)])
+
+        path = os.path.join(target, primary, secondary, rundir)
+
+        try:
+            os.makedirs(path)
+            self.cached = False
+        except OSError as err:
+            if err.errno is 17:
+                # we've already run and (hopefully) cached this
+                self.cached = True
+            else:
+                raise # some other OSError came up
+
+        self.config = config
+        self.dir = path
+        self.runpickle = 'run.pickle'
     
     def __enter__(self):
         return self
     
     def __exit__(self, type, value, traceback):
-        """Go back to where we're running, and destroy the temporary dir"""
-        if self.cleanup:
-            shutil.rmtree(self.dir)
+        """asdf"""
+        pass
     
     def __str__(self):
         return "<Working: %s>" % self.dir
     
     def link(self, resources, path=""):
-        """Caution! resources will be iterated; don't give a string!"""
+        """link some stuff in"""
+        if type(resources) == str:
+            resources = [resources]
         [os.symlink(
             os.path.join(path, resource),
             os.path.join(self.dir, resource)
@@ -56,15 +99,90 @@ class Working():
     def write(self, file_name, content):
         open(os.path.join(self.dir, file_name), 'w').write(content)
     
-    def run(self, cmd, logerr=True, errfile="errlog.txt"):
-        cmd += " 2> %s" % errfile if logerr else ""
-        p = subprocess.Popen(cmd, cwd=self.dir, shell=True)
-        p.wait()
-        err = open(os.path.join(self.dir, errfile)).read() if logerr else None
-        return p.returncode, err
+    def run(self, cmd, errfile="errorlog.txt"):
+        pkl = os.path.join(self.dir, self.runpickle)
+
+        try:
+            out = pickle.load(open(pkl, 'rb'))
+
+        except IOError:            
+            cmd += " 2> %s" % errfile
+            p = subprocess.Popen(cmd, cwd=self.dir, shell=True)
+            p.wait()
+            err = open(os.path.join(self.dir, errfile)).read()
+            out = [p.returncode, err, self.config]
+
+            cachefile = open(pkl, 'wb')
+            pickle.dump(out, cachefile)
+            cachefile.close()
+
+        return out
     
     def get(self, file_name, mode='r'):
         """all these files should be closed before finishing with Working"""
         return open(os.path.join(self.dir, file_name), mode)
 
+
+class CacheDict(dict):
+    """cache calculated stuff"""
+
+    def __init__(self, *args, **kwargs):
+        self.update(*args, **kwargs)
+
+    def __setitem__(self, key, value):
+        self._cache_key = self.__hash__()
+        super(CacheDict, self).__setitem__(key, value)
+
+    def __hash__(self):
+        try:
+            return reduce(lambda x,y:x^y, map(hash, self.items()))
+        except TypeError:
+            return hash(str(self))
+
+    def update(self, *args, **kwargs):
+        if args:
+            if len(args) > 1:
+                raise TypeError("expected 1 argument, got %d" % len(args))
+            other = dict(args[0])
+            for key in other:
+                self[key] = other[key]
+        for key in kwargs:
+            self[key] = kwargs[key]
+
+    def setdefault(self, key, value=None):
+        if key not in self:
+            self[key] = value
+        return self[key]
+
+
+class CallableDict(dict):
+    """A lazy dictionary who will call its keys on access"""
+
+    def __init__(self, *args, **kwargs):
+        self._cache = {}
+        super(CallableDict, self).__init__(*args, **kwargs)
+
+    def __setitem__(self, key, value):
+        if not hasattr(value, '__call__'):
+            raise TypeError('value ' + str(value) + ' must be callable')
+        super(CallableDict, self).__setitem__(key, value)
+
+    def __getitem__(self, key):
+        try:
+            val = self._cache[key]
+            print 'cache hit'
+        except KeyError:
+            print 'cache miss'
+            val = super(CallableDict, self).__getitem__(key)()
+            self._cache[key] = val
+        return val
+
+    def __delitem__(self, key):
+        super(CallableDict, self).__delitem__(key)
+        if key in self._cache:
+            del self._cache[key]
+
+    def update(self, d):
+        for k, v in d.items():
+            self.__setitem__(k, v)
 

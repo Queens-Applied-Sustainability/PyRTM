@@ -22,6 +22,7 @@
 """
 
 from collections import Iterable
+from itertools import repeat
 import numpy
     
 
@@ -30,47 +31,103 @@ import settings
 
 input_file = 'INPUT'
 command = 'sbdart'
-output_file = 'OUTPUT'
 header_lines = 3
+default_out = 'out.txt'
+
 
 class SBdartError(_rtm.RTMError): pass
 
 
 class SBdart(dict):
-    """picklable object for calling sbdart
-    intended to be used as you would the factory function version"""
-    def __init__(self, d={}, cleanup=True, *args, **kwargs):
+    """
+    model some radiative transfers!
+    """
+
+    def __init__(self, conf=None, target='.', cleanup=True, *args, **kwargs):
+        config = dict(settings.defaults) # head's up: repeated in translate
+        # breaking DRY because translate should work on its own, but this
+        # should also be complete.
+        config.update(conf or {})
+        self.target = target
         self.cleanup = cleanup
-        super(SBdart, self).__init__(d, *args, **kwargs)
-    
-    def __call__(self, atm={}):
-        self.update(atm)
-        with _rtm.Working(cleanup=self.cleanup) as working:
-            working.write(input_file, namelistify(translate(self)))
-            code, err = working.run('%s > %s' % (command, output_file))
+        super(SBdart, self).__init__(config, *args, **kwargs)
+
+    def run(self, output=default_out):
+        """ run sbdart """
+
+        with _rtm.Working(self.target, self) as working:
+            namelist = namelistify(translate(self))
+            working.write(input_file, namelist)
+
+            full_cmd = '%s > %s' % (command, output)
+            code, err, rcfg = working.run(full_cmd)
+
             if code == 127:
-                raise SBdartError("%d: sbdart Executable not found. Did you"\
-                    " install it correctly? stderr:\n%s" % (code, err))
+                raise SBdartError('%d: sbdart executable not found. '\
+                    'stderr:\n%s' % (code, err))
             elif "error: namelist block $INPUT not found" in err:
-                raise SBdartError("sbdart couln't read the &INPUT block."\
-                    " stderr:\n%s" % err)
+                raise SBdartError('sbdart could not read the &INPUT '\
+                    'namelist. stderr:\n%s' % err)
             elif code != 0:
-                raise SBdartError("Execution failed with code %d. stderr:\n%s"
-                    % (status, err))
+                raise SBdartError("sbdart execution failed. Code %d, '\
+                    'stderr:\n%s" % (status, err))
+
+    def raw(self, files=default_out):
+        """ grab a raw file """
+        raise NotImplementedError
+
+    @property
+    def spectrum(self, output='out.global.spectrum.txt'):
+        """ get the global spectrum for the atmosphere """
+
+        self.update({'output': 'per-wavelength'})
+        self.run(output=output)
+
+        with _rtm.Working(self.target, self) as working:
             try:
-                sbout = working.get(output_file)
+                sbout = working.get(output)
             except IOError:
                 raise SBdartError("didn't get output %s -- %s" %
-                    (output_file, err))
+                    (output, err))
             try:
-                raw = numpy.genfromtxt(sbout, skip_header=header_lines)
+                model_spectrum = numpy.genfromtxt(
+                    sbout, skip_header=header_lines, dtype=[
+                        ('wavelength', numpy.float64),
+                        ('filter_function_value', numpy.float64),
+                        ('top_downward_flux', numpy.float64),
+                        ('top_upward_flux', numpy.float64),
+                        ('top_direct_downward_flux', numpy.float64),
+                        ('downward_flux', numpy.float64),
+                        ('upward_flux', numpy.float64),
+                        ('direct_downward_flux', numpy.float64),
+                        ])
             except StopIteration:
                 raise SBdartError("Bad output file for genfromtxt (%d header" \
                                   " rows) -- %s" % (header_lines, err))
-            return numpy.array([raw[:,0], raw[:,5]])
+        
+        return model_spectrum
+
+    @property
+    def irradiance(self):
+        """Get the integrated irradiance across the spectrum"""
+
+        cols = ('top_downward_flux','top_upward_flux',
+            'top_direct_downward_flux', 'downward_flux',
+            'upward_flux', 'direct_downward_flux')
+
+        def get_irrad(col):
+            def argfree():
+                dat = self.spectrum
+                return numpy.trapz(dat[col],dat['wavelength'])
+            return argfree
+
+        return _rtm.CallableDict({k: get_irrad(k) for k in cols})
 
 
-def namelistify(params):
+
+
+
+def namelistify(config):
     """convert a dict to a fortran namelist"""
     def fortified(val, first_level=True):
         """Return a variable stringified in a fortran-readable mannor"""
@@ -83,14 +140,14 @@ def namelistify(params):
             
     nl = "&INPUT\n"
     nl += "\n".join(" %s = %s" %
-                    (key, fortified(val)) for key, val in params.items())
+                    (key, fortified(val)) for key, val in config.items())
     nl += "\n /\n"
     return nl
 
 
-def translate(params):
+def translate(config):
     p = dict(settings.defaults)
-    p.update(params)
+    p.update(config)
     
     unsupported = ['description', 'temprerature', 'solar_constant',
                    'season', 'year', 'average_daily_temperature',
