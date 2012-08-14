@@ -26,10 +26,9 @@ import numpy
 
 import _rtm
 import settings
-from __init__ import get_data
 
 resources = ['Albedo', 'CIE_data', 'Gases', 'Solar']
-resource_path = get_data('smarts')
+resource_path = _rtm.get_data('smarts')
 input_file = 'smarts295.inp.txt'
 command = 'smarts295'
 output_file = 'smarts295.ext.txt'

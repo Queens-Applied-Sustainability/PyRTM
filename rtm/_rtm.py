@@ -35,7 +35,12 @@ import settings
 MAX_FILE_CHARS = 42
 CACHE_DIR = 'cached'
 PRIMARY = ['description', 'longitude', 'latitude']
-SECONDARY = ['year', 'month']
+SECONDARY = ['year', 'month', 'day']
+
+
+_ROOT = os.path.abspath(os.path.dirname(__file__))
+def get_data(path):
+    return os.path.join(_ROOT, 'data', path)
 
 
 class RTMError(Exception): pass
@@ -43,7 +48,7 @@ class RTMError(Exception): pass
 
 def _vars_to_file(vars):
     """Return a safe string to be used as a file or directory name"""
-    clean_vars = [re.sub('[^a-zA-Z0-9_:]', '.', str(v)) for v in vars]
+    clean_vars = [re.sub('[^a-zA-Z0-9_:\-]', '.', str(v)) for v in vars]
     clean_string = '-'.join(clean_vars)
     if clean_string.startswith('.'):
         clean_string = 'c' + clean_string
@@ -56,26 +61,18 @@ def _vars_to_file(vars):
 class Model(dict):
     """The parent of what you probably use"""
 
-    def __init__(self, userconfig=None, target='.', cleanup=True, *args, **kwargs):
+    def __init__(self, userconfig=None, target='.', cleanup=True,
+                                                            *args, **kwargs):
         required = ['description', 'latitude', 'longitude', 'time']
-        config = dict({k: v for k, v in settings.defaults.items() if k in required})
+        config = dict(
+            {k: v for k, v in settings.defaults.items() if k in required})
         config.update(userconfig or {})
         self.target = target
         self.cleanup = cleanup
         super(Model, self).__init__(config, *args, **kwargs)
 
     def __hash__(self):
-        return hash(dict.__str__(self))
-
-
-"""
-state = {
-    'dir_created': True,
-    'outfile': {cmd: res},
-    'writes': [name],
-    }
-"""
-
+        return hash(dict.__str__(self) + str(self.__class__))
 
 
 class Working(object):

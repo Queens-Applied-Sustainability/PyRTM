@@ -89,7 +89,7 @@ class SBdart(_rtm.Model):
                         ('top_downward_flux', numpy.float64),
                         ('top_upward_flux', numpy.float64),
                         ('top_direct_downward_flux', numpy.float64),
-                        ('downward_flux', numpy.float64),
+                        ('global_horizontal', numpy.float64),
                         ('upward_flux', numpy.float64),
                         ('direct_downward_flux', numpy.float64),
                         ])
@@ -104,7 +104,7 @@ class SBdart(_rtm.Model):
         """Get the integrated irradiance across the spectrum"""
 
         cols = ('top_downward_flux','top_upward_flux',
-            'top_direct_downward_flux', 'downward_flux',
+            'top_direct_downward_flux', 'global_horizontal',
             'upward_flux', 'direct_downward_flux')
 
         def get_irrad(col):

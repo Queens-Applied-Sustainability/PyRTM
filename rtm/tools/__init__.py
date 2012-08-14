@@ -21,7 +21,5 @@
     along with PyRTM.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-
-import settings
-from sbdart import SBdart
-from smarts import SMARTS
+from optimize import Optimizer
+#from timeseries import SOMETHING
