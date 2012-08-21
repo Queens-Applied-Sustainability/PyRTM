@@ -32,18 +32,19 @@ from superhash import superhash
 import settings
 
 
+class RTMError(Exception): pass
+
+
 MAX_FILE_CHARS = 42
 CACHE_DIR = 'cached'
 PRIMARY = ['description', 'longitude', 'latitude']
 SECONDARY = ['year', 'month', 'day']
 
-
 _ROOT = os.path.abspath(os.path.dirname(__file__))
+
+
 def get_data(path):
     return os.path.join(_ROOT, 'data', path)
-
-
-class RTMError(Exception): pass
 
 
 def _vars_to_file(vars):
@@ -59,7 +60,7 @@ def _vars_to_file(vars):
 
 
 class Model(dict):
-    """The parent of what you probably use"""
+    """The parent of what you probably need to use"""
 
     def __init__(self, userconfig=None, target='.', cleanup=True,
                                                             *args, **kwargs):

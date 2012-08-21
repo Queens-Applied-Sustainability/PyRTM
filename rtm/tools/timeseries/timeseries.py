@@ -22,11 +22,12 @@
 """
 
 from .. import smarts
+from numpy import sin, cos
 
 
 # cos and sin in degrees
-def dcos(d): return cos(d * pi / 180.)
-def dsin(d): return sin(d * pi / 180.)
+def dcos(d): return cos(d * pi / 180.0)
+def dsin(d): return sin(d * pi / 180.0)
 
 
 def solar_incident_radiation(time, lat, lng):

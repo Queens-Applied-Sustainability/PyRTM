@@ -56,7 +56,8 @@ class TestNamelist(unittest.TestCase):
 			'ZCLOUD = 6\n /\n'
 		self.assertNamelist(config, nl)
 
-	
+
+
 
 
 

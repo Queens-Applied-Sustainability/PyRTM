@@ -71,4 +71,4 @@ class Optimizer(object):
         return result
 
     def clean_up(self):
-        pass
+        raise NotImplementedError

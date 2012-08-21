@@ -71,7 +71,6 @@ class SBdart(_rtm.Model):
     @property
     def spectrum(self):
         """ get the global spectrum for the atmosphere """
-        self.update({'output': 'per-wavelength'})
         output='out.spectrum.txt'
         self.run(output=output)
 
@@ -135,26 +134,50 @@ def namelistify(config):
 
 
 def translate(config):
+    """
+    solar constant
+
+    """
     p = dict(settings.defaults)
     p.update(config)
     
-    unsupported = ['description', 'temprerature', 'solar_constant',
-                   'season', 'year', 'average_daily_temperature',
-                   'temperature', 'single_scattering_albedo',
-                   'angstroms_exponent', 'aerosol_asymmetry', 'output']
+    unsupported = ['description', 'solar_constant', 'season', 'temperature',
+        'average_daily_temperature', 'temperature', 'nitrogen_trioxide',
+        'nitrous_acid', 'formaldehyde']
     
     hard_code = {
-        'IAER': 1,
+        'IAER': 5, # CHANGED TO 5: user set wlbaer, tbaer, wbaer, gbaer
+        'JAER': 1, # background stratospheric....
+        'WLBAER': 0.55, # um
         'ZCLOUD': 6,
         'IOUT': 1, # per-wavelength
+        'NF': 2, # lowtran 7
+        'ZTRP': 1, # km (SMARTS assumes 1km)
         }
     
     direct = {
         'latitude': 'ALAT',
         'longitude': 'ALON',
+        'single_scattering_albedo': 'WBAER',
+        'aerosol_asymmetry': 'GBAER',
         'pressure': 'PBAR',
+        'angstroms_coefficient': 'TBAER', # optical depth at 0.55 um
+        'angstroms_exponent': 'ABAER',
+
+        'nitrogen': 'XN2', ##
+        'oxygen': 'XO2', ##
         'carbon_dioxide': 'XCO2',
-        'aerosol_optical_depth': 'TBAER',
+        'methane': 'XCH4',
+        'nitrous_oxide': 'XN2O', ##
+        'carbon_monoxide': 'XCO',
+        'ammonia': 'XNH3', ##
+        'sulphur_dioxide': 'XSO2',
+        'nitric_oxide': 'XNO',
+        'nitric_acid': 'XHNO3',
+        'nitrogen_dioxide': 'XNO2',
+        'boundary_layer_ozone': 'UO3',
+        'tropospheric_ozone': 'O3TRP',
+
         'cloud': 'TCLOUD',
         'lower_limit': 'WLINF',
         'upper_limit': 'WLSUP',
@@ -164,14 +187,14 @@ def translate(config):
     convert = {
         'time': ((), lambda v:
             (lambda tt: {
-                'TIME': tt.tm_hour + tt.tm_min/60. + tt.tm_sec/3600,
+                'TIME': tt.tm_hour + tt.tm_min/60.0 + tt.tm_sec/3600.0,
                 'IDAY': tt.tm_yday,
                 })(v.utctimetuple())
             ),
-        'altitude': ((), lambda v: {
+        'elevation': ((), lambda v: {
             'ZOUT': [v, 50]
             }),
-        'surface': ((), lambda v: {
+        'surface_type': ((), lambda v: {
             'ISALB': {
                 'snow': 1,
                 'clear water': 2,
@@ -195,6 +218,9 @@ def translate(config):
         'relative_humidity': (('temperature',), lambda v: {
             'UW': rh_to_h2o(v, p['temperature'])
             }),
+        #'tropospheric_ozone': ((). lambda v: {
+        #    'O3TRP': ppm_to_atmcm(ppm=v, height=1, )
+        #    }),
         }
     
     processed = []

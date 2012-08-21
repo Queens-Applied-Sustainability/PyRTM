@@ -69,7 +69,6 @@ class SMARTS(_rtm.Model):
     @property
     def spectrum(self):
         """get the global spectrum for the atmosphere"""
-        self.update({'output': 'per-wavelength'})
         output='out.spectrum.txt'
         self.run()
 
@@ -131,14 +130,22 @@ def cardify(params):
     card_print(2, '4 IH2O mode select')
     
     # Card 5
-    card_print(1, '5 IO3 mode select') # use default ozone FIXME why?
+    card_print(0, '5 IO3 mode select') # use default ozone
+
+    # add 5a and put a default in settings for it
+    card_print('%d %f' % (0, params['AbO3']), 'ozone column')
     
     # Card 6
-    card_print(1, '6 IGAS') # use defaults	
+    card_print(0, '6 IGAS') # specify gasses
+    card_print(0, 'ILOAD')
+    card_print('%f %f %f %f %f %f %f %f %f %f' %
+        tuple(params[gas] for gas in
+            ['ApCH2O', 'ApCh4', 'ApCO', 'ApHNO2', 'ApHNO3', 'ApNO', 'ApNO2',
+            'ApNO3', 'ApO3', 'ApSO2']), 'gasses')
     
     # Card 7
-    card_print(str(params['qCO2']), '7 qCO2 ppm') # FIXME ?!?!??!
-    card_print(0) # FIXME !?!??!
+    card_print(str(params['qCO2']), '7 qCO2 ppm') 
+    card_print(0) # SPECTRUM -- Gueymard 2004 
     
     # Card 8
     card_print('\'USER\'', '8 AEROS')
@@ -146,16 +153,16 @@ def cardify(params):
                                                 params['OMEGL'], params['GG']))
     
     # Card 9
-    card_print(1, '9 ITURB')
-    card_print(str(params['BETA']))
+    card_print(5, '9 ITURB') # read TAU550
+    card_print(str(params['TAU550']))
     
     # Card 10
-    card_print(5, '10 IALBDX')
-    card_print(0)
+    card_print(str(params['IALBDX']), '10 IALBDX')
+    card_print(0) # 10b: no tilted surface
     
     # Card 11
-    card_print('%s %s %s %s' % (params['WLMN'], params['WLMX'], params['SUNCOR'],
-                                                params['SOLARC']), '11 blergh')
+    card_print('%s %s %s %s' % (params['WLMN'], params['WLMX'],
+        params['SUNCOR'], params['SOLARC']), '11 blergh')
     
     # Card 12
     card_print(2, '12 IPRT')
@@ -191,30 +198,38 @@ def translate(params):
     p = dict(settings.defaults)
     p.update(params)
     
-    unsupported = ['cloud', 'output']
+    unsupported = ['cloud', 'nitrogen', 'oxygen', 'ammonia', 'nitrous_oxide']
     
     hard_code = {
-        'HEIGHT': 0, # Card 2 Mode 1
-        'INTVL': 2, # Card 12 Mode 2
+        'HEIGHT': 0, # Card 2 Mode 1 -- height above elevation
         'ZONE': 0, # Card 17 Mode 3
-        'SUNCOR': 1, # FIXME
+        'SUNCOR': 1, # overwritten anyway (calculated from card 17)
         }
     
     direct = {
         'solar_constant': 'SOLARC',
         'longitude': 'LONGIT',
         'latitude': 'LATIT',
-        'altitude': 'ALTIT',
-        'season': 'SEASON', #TODO
+        'elevation': 'ALTIT',
         'average_daily_temperature': 'TAIR',
         'temperature': 'TDAY',
         'pressure': 'SPR',
         'relative_humidity': 'RH',
         'carbon_dioxide': 'qCO2',
         'single_scattering_albedo': 'OMEGL',
-        'aerosol_optical_depth': 'BETA',
+        'angstroms_coefficient': 'TAU550',
         'aerosol_asymmetry': 'GG',
-        'resolution': 'WLINC',
+        'boundary_layer_ozone': 'AbO3',
+
+        'formaldehyde': 'ApCH2O',
+        'methane': 'ApCh4',
+        'carbon_monoxide': 'ApCO',
+        'nitrous_acid': 'ApHNO2',
+        'nitric_acid': 'ApHNO3',
+        'nitric_oxide': 'ApNO',
+        'nitrogen_dioxide': 'ApNO2',
+        'nitrogen_trioxide': 'ApNO3',
+        'sulphur_dioxide': 'ApSO2',
         }
     
     convert = {
@@ -228,8 +243,14 @@ def translate(params):
                 'DAY': tt.tm_mday,
                 'HOUR': tt.tm_hour + tt.tm_min/60. + tt.tm_sec/3600,
                 })(v.utctimetuple())
-            ), 
-        'surface': ((), lambda v: {
+            ),
+        'season': ((), lambda v: {
+            'SEASON': {
+                'winter': 'WINTER',
+                'summer': 'SUMMER',
+                }[v]
+            }),
+        'surface_type': ((), lambda v: {
             'IALBDX': {
                 'snow': 3,
                 'clear water': 2,
@@ -254,14 +275,20 @@ def translate(params):
             'ALPHA1': v,
             'ALPHA2': v,
             }),
+        'tropospheric_ozone': ((), lambda v: {
+            'ApO3': v*10, # atm-cm -> ppmv
+            }),
         'lower_limit': ((), lambda v: {
-            'WLMN': v*1000,
-            'WPMN': v*1000,
+            'WLMN': v*1000, # um -> nm
+            'WPMN': v*1000, # um -> nm
             }),
         'upper_limit': ((), lambda v: {
-            'WLMX': v*1000,
-            'WPMX': v*1000,
+            'WLMX': v*1000, # um -> nm
+            'WPMX': v*1000, # um -> nm
             }),
+        'resolution': ((), lambda v: {
+            'INTVL': v*1000, # um -> nm
+            })
         }
     
     processed = []
@@ -285,20 +312,4 @@ def translate(params):
             addItem(param,val)
     
     return translated
-
-"""
-G is irradiance
-
-AM is clear sky
-Kt is cloudy
-
-
-(first derivative)Gt is the irradiation
-Kt is clearness, from book
-
-"""
-
-
-
-
 
