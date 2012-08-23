@@ -36,6 +36,7 @@ output_log = 'log.txt'
 output_headers = 1
 
 class SMARTSError(_rtm.RTMError): pass
+class SunDownError(SMARTSError): pass
 
 
 class SMARTS(_rtm.Model):
@@ -63,8 +64,19 @@ class SMARTS(_rtm.Model):
                 raise SMARTSError("%d: SMARTS Executable not found. Did you"\
                     " install it correctly? stderr:\n%s" % (code, err))
             elif code != 0:
-                raise SMARTSError("Execution failed with code %d. stderr:\n%s"
-                    % (code, err))
+                raise SMARTSError("%s: Execution failed with code %d. "\
+                    "stderr:\n%s" % (working.path, code, err))
+
+            # check for errors
+            smlog = working.get('smarts295.out.txt')
+            for line in smlog:
+                if 'ERROR' in line:
+                    if '** ERROR #7 ***' in line:
+                        raise SunDownError('%s: smarts refuses to work when '
+                            'the sun is down.\n%s' %(working.path, line))
+                    else:
+                        raise SMARTSError("%s: smarts no like\n%s" %
+                            (working.path, line))
 
     @property
     def spectrum(self):
@@ -76,8 +88,8 @@ class SMARTS(_rtm.Model):
             try:
                 smout = working.get(output_file)
             except IOError:
-                raise SMARTSError("didn't get output %s -- %s" %
-                    (output_file, err))
+                raise SMARTSError("%s: didn't get output %s" %
+                    (working.path, output_file))
             try:
                 model_spectrum = numpy.genfromtxt(
                     smout, skip_header=output_headers, dtype=[
@@ -85,8 +97,8 @@ class SMARTS(_rtm.Model):
                         ('global_horizontal', numpy.float64),
                         ])
             except StopIteration:
-                raise SMARTSError("Bad output file for genfromtxt (%d header" \
-                                  " rows) -- %s" % (header_lines, err))
+                raise SMARTSError("%s: Bad output file for genfromtxt "\
+                    "(%d header rows)" % (working.path, output_headers))
             model_spectrum['wavelength'] /= 1000
             model_spectrum['global_horizontal'] *= 1000
 
@@ -185,8 +197,8 @@ def cardify(params):
     # Card 17
     card_print(3, '17 IMASS')
     card_print('%s %s %s %s %s %s %s' % (params['YEAR'], params['MONTH'],
-               params['DAY'], params['HOUR'], params['LATIT'], params['LONGIT'],
-               params['ZONE']))
+               params['DAY'], params['HOUR'], params['LATIT'],
+               params['LONGIT'], params['ZONE']))
     
     # Spit out our formatted string.
     card_print('')
@@ -241,7 +253,7 @@ def translate(params):
                 'YEAR': tt.tm_year,
                 'MONTH': tt.tm_mon,
                 'DAY': tt.tm_mday,
-                'HOUR': tt.tm_hour + tt.tm_min/60. + tt.tm_sec/3600,
+                'HOUR': tt.tm_hour + tt.tm_min/60. + tt.tm_sec/3600 - 1,
                 })(v.utctimetuple())
             ),
         'season': ((), lambda v: {
