@@ -88,13 +88,13 @@ class SBdart(_rtm.Model):
                         ('top_downward_flux', numpy.float64),
                         ('top_upward_flux', numpy.float64),
                         ('top_direct_downward_flux', numpy.float64),
-                        ('global_horizontal', numpy.float64),
-                        ('upward_flux', numpy.float64),
-                        ('direct_downward_flux', numpy.float64),
+                        ('global', numpy.float64),
+                        ('upward', numpy.float64),
+                        ('direct', numpy.float64),
                         ])
             except StopIteration:
                 raise SBdartError("Bad output file for genfromtxt (%d header" \
-                                  " rows) -- %s" % (header_lines, err))
+                                  " rows)" % (header_lines))
         
         return model_spectrum
 
@@ -103,8 +103,8 @@ class SBdart(_rtm.Model):
         """Get the integrated irradiance across the spectrum"""
 
         cols = ('top_downward_flux','top_upward_flux',
-            'top_direct_downward_flux', 'global_horizontal',
-            'upward_flux', 'direct_downward_flux')
+            'top_direct_downward_flux', 'global',
+            'upward', 'direct')
 
         def get_irrad(col):
             def irrad():
@@ -141,18 +141,16 @@ def translate(config):
     p = dict(settings.defaults)
     p.update(config)
     
-    unsupported = ['description', 'solar_constant', 'season', 'temperature',
-        'average_daily_temperature', 'temperature', 'nitrogen_trioxide',
-        'nitrous_acid', 'formaldehyde']
+    unsupported = ['description', 'solar_constant', 'season', 'formaldehyde',
+        'average_daily_temperature', 'nitrogen_trioxide', 'nitrous_acid']
     
     hard_code = {
         'IAER': 5, # CHANGED TO 5: user set wlbaer, tbaer, wbaer, gbaer
         'JAER': 1, # background stratospheric....
         'WLBAER': 0.55, # um
-        'ZCLOUD': 6,
         'IOUT': 1, # per-wavelength
-        'NF': 2, # lowtran 7
-        'ZTRP': 1, # km (SMARTS assumes 1km)
+        'NF': 2, # 2 = lowtran 7
+        'ZTRP': 1, # km - assume 1km
         }
     
     direct = {
@@ -178,10 +176,16 @@ def translate(config):
         'boundary_layer_ozone': 'UO3',
         'tropospheric_ozone': 'O3TRP',
 
-        'cloud': 'TCLOUD',
         'lower_limit': 'WLINF',
         'upper_limit': 'WLSUP',
         'resolution': 'WLINC',
+
+
+        #'strat_aod': 'TAERST',
+        #'model': 'NF',
+        #'vis': 'VIS',
+        #'zbaer': 'ZBAER',
+        #'dbaer': 'DBAER',
         }
     
     convert = {
@@ -215,12 +219,17 @@ def translate(config):
                 'us62': 6,
                 }[v]
             }),
+        'temperature': ((), lambda v: {}), # used in the relh calculation
         'relative_humidity': (('temperature',), lambda v: {
             'UW': rh_to_h2o(v, p['temperature'])
             }),
-        #'tropospheric_ozone': ((). lambda v: {
-        #    'O3TRP': ppm_to_atmcm(ppm=v, height=1, )
-        #    }),
+        'cloud_altitude': ((), lambda v: {}), # used in cloud thickness
+        'cloud_thickness': (('cloud_altitude',), lambda v: {
+            'ZCLOUD': [p['cloud_altitude'], -1 * (p['cloud_altitude'] + v)]
+            }),
+        'cloud_optical_depth': ((), lambda v: {
+            'TCLOUD': [v, 1]
+            })
         }
     
     processed = []
@@ -235,7 +244,7 @@ def translate(config):
                 [addItem(d) for d in convert[param][0] if not d in processed]
                 translated.update(convert[param][1](val))
             else:
-                print "x %s" % param # ERROR!
+                print "x %s" % param # Unrecognized!
             
         processed.append(param)
     
@@ -249,7 +258,8 @@ def translate(config):
 def rh_to_h2o(rel_humid, temp):
     """Saturation vapour pressure (mb). C. Gueymard, Assessment of the
     Accuracy and Computing Speed of Simplified Saturation Vapor Equations
-    Using a New Reference Dataset, J. Appl. Meteor. 32 (1993) 1294-1300."""
+    Using a New Reference Dataset, J. Appl. Meteor. 32 (1993) 1294-1300.
+    Input is in degrees C and % RH"""
     RH = rel_humid
     T = temp
     pws = (6.110455 +

@@ -94,13 +94,19 @@ class SMARTS(_rtm.Model):
                 model_spectrum = numpy.genfromtxt(
                     smout, skip_header=output_headers, dtype=[
                         ('wavelength', numpy.float64),
-                        ('global_horizontal', numpy.float64),
+                        ('direct_normal', numpy.float64),
+                        ('diffuse', numpy.float64),
+                        ('global', numpy.float64),
+                        ('direct', numpy.float64),
                         ])
             except StopIteration:
                 raise SMARTSError("%s: Bad output file for genfromtxt "\
                     "(%d header rows)" % (working.path, output_headers))
             model_spectrum['wavelength'] /= 1000
-            model_spectrum['global_horizontal'] *= 1000
+            model_spectrum['direct_normal'] *= 1000
+            model_spectrum['diffuse'] *= 1000
+            model_spectrum['direct'] *= 1000
+            model_spectrum['global'] *= 1000
 
         return model_spectrum
 
@@ -108,7 +114,7 @@ class SMARTS(_rtm.Model):
     def irradiance(self):
         """Get the integrated irradiance across the spectrum"""
 
-        cols = ('global_horizontal',)
+        cols = ('direct_normal', 'diffuse', 'global', 'direct')
         def get_irrad(col):
             def irrad():
                 dat = self.spectrum
@@ -179,8 +185,8 @@ def cardify(params):
     # Card 12
     card_print(2, '12 IPRT')
     card_print('%s %s %s' % (params['WPMN'], params['WPMX'], params['INTVL']))
-    card_print('1')
-    card_print('4') # using 4 For integration
+    card_print('4') # NUMBER OF OUTPUT COLUMNS
+    card_print('2 3 4 5') # direct normal, diffuse, global, direct (horizontal)
     
     # Card 13
     card_print(0, '13 ICIRC')
@@ -210,11 +216,12 @@ def translate(params):
     p = dict(settings.defaults)
     p.update(params)
     
-    unsupported = ['cloud', 'nitrogen', 'oxygen', 'ammonia', 'nitrous_oxide']
+    unsupported = ['cloud_altitude', 'cloud_thickness', 'cloud_optical_depth',
+        'nitrogen', 'oxygen', 'ammonia', 'nitrous_oxide']
     
     hard_code = {
         'HEIGHT': 0, # Card 2 Mode 1 -- height above elevation
-        'ZONE': 0, # Card 17 Mode 3
+        'ZONE': 0, # Card 17 Mode 3 (datetime is converted to UTC)
         'SUNCOR': 1, # overwritten anyway (calculated from card 17)
         }
     
@@ -253,7 +260,7 @@ def translate(params):
                 'YEAR': tt.tm_year,
                 'MONTH': tt.tm_mon,
                 'DAY': tt.tm_mday,
-                'HOUR': tt.tm_hour + tt.tm_min/60. + tt.tm_sec/3600 - 1,
+                'HOUR': tt.tm_hour + tt.tm_min/60.0 + tt.tm_sec/3600.0,
                 })(v.utctimetuple())
             ),
         'season': ((), lambda v: {

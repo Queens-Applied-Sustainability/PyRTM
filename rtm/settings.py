@@ -21,8 +21,7 @@
     along with PyRTM.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from datetime import datetime
-from pytz import timezone
+from dateutil.parser import parse as parsedt
 
 defaults = {
     'description': 'Default Config', # use internally; any string
@@ -30,8 +29,7 @@ defaults = {
     'solar_constant': 1367, # W/m^2 in space
     
     'season': 'summer', # summer or winter
-    'time': datetime(2012, 10, 11, 12,
-        tzinfo=timezone('EST')), # specifying tz is important!
+    'time': parsedt('2012-10-11 12:00:00 -0500'), # specifying tz is important!
     'latitude': 44, # degrees, north-positive
     'longitude': 283.7, # degrees, east-positive
     'elevation': 0, # metres above sea level
@@ -69,8 +67,10 @@ defaults = {
     'nitrous_oxide': 0.32, # ppm
     'ammonia': 5e-4, # ppm
 
-    'cloud': 0, # optical thickness?
-    
+    'cloud_altitude': 2, # km bottom of cloud ... suggested by QIW
+    'cloud_thickness': 1, # km
+    'cloud_optical_depth': 0, # optical depth at 0.55 um
+
     # spectral settings
     'lower_limit': 0.28, # um
     'upper_limit': 2.5, # um
