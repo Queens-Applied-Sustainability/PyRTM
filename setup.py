@@ -25,30 +25,6 @@ import os
 from setuptools import setup
 from setuptools.command.install import install as DistutilsInstall
 
-class CompileAndInstall(DistutilsInstall):
-    def comp(self, which):
-        import subprocess
-        makers = ['make', 'gmake']
-        fcompilers = ['f90', 'ifort', 'pgfortran', 'f95', 'gfortran']
-        for mk in makers:
-            for fc in fcompilers:
-                fbuild = subprocess.Popen('%s FC=%s' % (mk, fc),
-                                          cwd=os.path.join('bin', which),
-                                          shell=True)
-                fbuild.wait()
-                print "RETURN CODE FOR %s %s: %d" % (mk, fc, fbuild.returncode)
-                if fbuild.returncode == 0:
-                    return # Great!
-                if fc is fcompilers[-1] and mk is makers[-1]:
-                    print "FAIL: Couldn't build fortran sources."
-                    import sys
-                    sys.exit(1)
-        
-    def run(self):
-        self.comp('sbdart')
-        self.comp('smarts')
-        DistutilsInstall.run(self)
-
 
 setup(
     name='RTM',
@@ -68,7 +44,6 @@ setup(
         ],
     
     #install_requires=['numpy'],
-    cmdclass={'install': CompileAndInstall},
     )
     
     

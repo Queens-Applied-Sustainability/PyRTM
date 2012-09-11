@@ -22,6 +22,8 @@
 """
 
 from collections import Iterable
+from itertools import repeat
+from functools import wraps
 import numpy
     
 
@@ -30,47 +32,90 @@ import settings
 
 input_file = 'INPUT'
 command = 'sbdart'
-output_file = 'OUTPUT'
 header_lines = 3
+default_out = 'out.txt'
+
 
 class SBdartError(_rtm.RTMError): pass
 
 
-class SBdart(dict):
-    """picklable object for calling sbdart
-    intended to be used as you would the factory function version"""
-    def __init__(self, d={}, cleanup=True, *args, **kwargs):
-        self.cleanup = cleanup
-        super(SBdart, self).__init__(d, *args, **kwargs)
-    
-    def __call__(self, atm={}):
-        self.update(atm)
-        with _rtm.Working(cleanup=self.cleanup) as working:
-            working.write(input_file, namelistify(translate(self)))
-            code, err = working.run('%s > %s' % (command, output_file))
+class SBdart(_rtm.Model):
+    """
+    model some radiative transfers
+    """
+
+    def raw(self, rawfile):
+        """ grab a raw file """
+        with _rtm.Working(self) as working:
+            return working.get(rawfile)
+
+    def run(self, output=default_out):
+        """ run sbdart """
+
+        with _rtm.Working(self) as working:
+            full_cmd = '%s > %s' % (command, output)
+            namelist = namelistify(translate(self))
+            working.write(input_file, namelist)
+            code, err, rcfg = working.run(full_cmd, output)
+
             if code == 127:
-                raise SBdartError("%d: sbdart Executable not found. Did you"\
-                    " install it correctly? stderr:\n%s" % (code, err))
+                raise SBdartError('%d: sbdart executable not found. '\
+                    'stderr:\n%s' % (code, err))
             elif "error: namelist block $INPUT not found" in err:
-                raise SBdartError("sbdart couln't read the &INPUT block."\
-                    " stderr:\n%s" % err)
+                raise SBdartError('sbdart could not read the &INPUT '\
+                    'namelist. stderr:\n%s' % err)
             elif code != 0:
-                raise SBdartError("Execution failed with code %d. stderr:\n%s"
-                    % (status, err))
+                raise SBdartError("sbdart execution failed. Code %d, '\
+                    'stderr:\n%s" % (status, err))
+
+    @property
+    def spectrum(self):
+        """ get the global spectrum for the atmosphere """
+        output='out.spectrum.txt'
+        self.run(output=output)
+
+        with _rtm.Working(self) as working:
             try:
-                sbout = working.get(output_file)
+                sbout = working.get(output)
             except IOError:
                 raise SBdartError("didn't get output %s -- %s" %
-                    (output_file, err))
+                    (output, err))
             try:
-                raw = numpy.genfromtxt(sbout, skip_header=header_lines)
+                model_spectrum = numpy.genfromtxt(
+                    sbout, skip_header=header_lines, dtype=[
+                        ('wavelength', numpy.float64),
+                        ('filter_function_value', numpy.float64),
+                        ('top_downward_flux', numpy.float64),
+                        ('top_upward_flux', numpy.float64),
+                        ('top_direct_downward_flux', numpy.float64),
+                        ('global', numpy.float64),
+                        ('upward', numpy.float64),
+                        ('direct', numpy.float64),
+                        ])
             except StopIteration:
                 raise SBdartError("Bad output file for genfromtxt (%d header" \
-                                  " rows) -- %s" % (header_lines, err))
-            return numpy.array([raw[:,0], raw[:,5]])
+                                  " rows)" % (header_lines))
+        
+        return model_spectrum
+
+    @property
+    def irradiance(self):
+        """Get the integrated irradiance across the spectrum"""
+
+        cols = ('top_downward_flux','top_upward_flux',
+            'top_direct_downward_flux', 'global',
+            'upward', 'direct')
+
+        def get_irrad(col):
+            def irrad():
+                dat = self.spectrum
+                return numpy.trapz(dat[col],dat['wavelength'])
+            return irrad
+
+        return _rtm.CallableDict({k: get_irrad(k) for k in cols})
 
 
-def namelistify(params):
+def namelistify(config):
     """convert a dict to a fortran namelist"""
     def fortified(val, first_level=True):
         """Return a variable stringified in a fortran-readable mannor"""
@@ -83,49 +128,77 @@ def namelistify(params):
             
     nl = "&INPUT\n"
     nl += "\n".join(" %s = %s" %
-                    (key, fortified(val)) for key, val in params.items())
+                    (key, fortified(val)) for key, val in config.items())
     nl += "\n /\n"
     return nl
 
 
-def translate(params):
+def translate(config):
+    """
+    solar constant
+
+    """
     p = dict(settings.defaults)
-    p.update(params)
+    p.update(config)
     
-    unsupported = ['description', 'temprerature', 'solar_constant',
-                   'season', 'year', 'average_daily_temperature',
-                   'temperature', 'single_scattering_albedo',
-                   'angstroms_exponent', 'aerosol_asymmetry', 'output']
+    unsupported = ['description', 'solar_constant', 'season', 'formaldehyde',
+        'average_daily_temperature', 'nitrogen_trioxide', 'nitrous_acid']
     
     hard_code = {
-        'IAER': 1,
-        'ZCLOUD': 6,
+        'IAER': 5, # CHANGED TO 5: user set wlbaer, tbaer, wbaer, gbaer
+        'JAER': 1, # background stratospheric....
+        'WLBAER': 0.55, # um
         'IOUT': 1, # per-wavelength
+        'NF': 2, # 2 = lowtran 7
+        'ZTRP': 1, # km - assume 1km
         }
     
     direct = {
         'latitude': 'ALAT',
         'longitude': 'ALON',
+        'single_scattering_albedo': 'WBAER',
+        'aerosol_asymmetry': 'GBAER',
         'pressure': 'PBAR',
+        'angstroms_coefficient': 'TBAER', # optical depth at 0.55 um
+        'angstroms_exponent': 'ABAER',
+
+        'nitrogen': 'XN2', ##
+        'oxygen': 'XO2', ##
         'carbon_dioxide': 'XCO2',
-        'aerosol_optical_depth': 'TBAER',
-        'cloud': 'TCLOUD',
+        'methane': 'XCH4',
+        'nitrous_oxide': 'XN2O', ##
+        'carbon_monoxide': 'XCO',
+        'ammonia': 'XNH3', ##
+        'sulphur_dioxide': 'XSO2',
+        'nitric_oxide': 'XNO',
+        'nitric_acid': 'XHNO3',
+        'nitrogen_dioxide': 'XNO2',
+        'boundary_layer_ozone': 'UO3',
+        'tropospheric_ozone': 'O3TRP',
+
         'lower_limit': 'WLINF',
         'upper_limit': 'WLSUP',
         'resolution': 'WLINC',
+
+
+        #'strat_aod': 'TAERST',
+        #'model': 'NF',
+        #'vis': 'VIS',
+        #'zbaer': 'ZBAER',
+        #'dbaer': 'DBAER',
         }
     
     convert = {
         'time': ((), lambda v:
             (lambda tt: {
-                'TIME': tt.tm_hour + tt.tm_min/60. + tt.tm_sec/3600,
+                'TIME': tt.tm_hour + tt.tm_min/60.0 + tt.tm_sec/3600.0,
                 'IDAY': tt.tm_yday,
                 })(v.utctimetuple())
             ),
-        'altitude': ((), lambda v: {
+        'elevation': ((), lambda v: {
             'ZOUT': [v, 50]
             }),
-        'surface': ((), lambda v: {
+        'surface_type': ((), lambda v: {
             'ISALB': {
                 'snow': 1,
                 'clear water': 2,
@@ -146,9 +219,17 @@ def translate(params):
                 'us62': 6,
                 }[v]
             }),
+        'temperature': ((), lambda v: {}), # used in the relh calculation
         'relative_humidity': (('temperature',), lambda v: {
             'UW': rh_to_h2o(v, p['temperature'])
             }),
+        'cloud_altitude': ((), lambda v: {}), # used in cloud thickness
+        'cloud_thickness': (('cloud_altitude',), lambda v: {
+            'ZCLOUD': [p['cloud_altitude'], -1 * (p['cloud_altitude'] + v)]
+            }),
+        'cloud_optical_depth': ((), lambda v: {
+            'TCLOUD': [v, 1]
+            })
         }
     
     processed = []
@@ -163,7 +244,7 @@ def translate(params):
                 [addItem(d) for d in convert[param][0] if not d in processed]
                 translated.update(convert[param][1](val))
             else:
-                print "x %s" % param # ERROR!
+                print "x %s" % param # Unrecognized!
             
         processed.append(param)
     
@@ -177,7 +258,8 @@ def translate(params):
 def rh_to_h2o(rel_humid, temp):
     """Saturation vapour pressure (mb). C. Gueymard, Assessment of the
     Accuracy and Computing Speed of Simplified Saturation Vapor Equations
-    Using a New Reference Dataset, J. Appl. Meteor. 32 (1993) 1294-1300."""
+    Using a New Reference Dataset, J. Appl. Meteor. 32 (1993) 1294-1300.
+    Input is in degrees C and % RH"""
     RH = rel_humid
     T = temp
     pws = (6.110455 +

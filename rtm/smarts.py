@@ -26,10 +26,9 @@ import numpy
 
 import _rtm
 import settings
-from __init__ import get_data
 
 resources = ['Albedo', 'CIE_data', 'Gases', 'Solar']
-resource_path = get_data('smarts')
+resource_path = _rtm.get_data('smarts')
 input_file = 'smarts295.inp.txt'
 command = 'smarts295'
 output_file = 'smarts295.ext.txt'
@@ -37,37 +36,91 @@ output_log = 'log.txt'
 output_headers = 1
 
 class SMARTSError(_rtm.RTMError): pass
+class SunDownError(SMARTSError): pass
 
 
-class SMARTS(dict):
-    """picklable object for calling smarts
-    intended to be used as you would the factory function version"""
-    def __init__(self, d={}, cleanup=True, *args, **kwargs):
-        self.cleanup = cleanup
-        super(SMARTS, self).__init__(d, *args, **kwargs)
+class SMARTS(_rtm.Model):
+    """
+    model some radiative transfers
+    """
     
-    def __call__(self, atm={}):
-        self.update(atm)
-        with _rtm.Working(cleanup=self.cleanup) as working:
+    def raw(self, rawfile):
+        """ grab a raw file """
+        with _rtm.Working(self) as working:
+            return working.get(rawfile)
+
+
+    def run(self):
+        """run smarts"""
+
+        with _rtm.Working(self) as working:
             working.link(resources, path=resource_path)
-            working.write(input_file, cardify(translate(self)))
-            code, err = working.run('%s > %s' % (command, output_log))
+            full_cmd = '%s > %s' % (command, output_log)
+            cards = cardify(translate(self))
+            working.write(input_file, cards)
+            code, err, rcfg = working.run(full_cmd, output_log)
+
             if code == 127:
                 raise SMARTSError("%d: SMARTS Executable not found. Did you"\
                     " install it correctly? stderr:\n%s" % (code, err))
             elif code != 0:
-                raise SMARTSError("Execution failed with code %d. stderr:\n%s"
-                    % (code, err))
+                raise SMARTSError("%s: Execution failed with code %d. "\
+                    "stderr:\n%s" % (working.path, code, err))
+
+            # check for errors
+            smlog = working.get('smarts295.out.txt')
+            for line in smlog:
+                if 'ERROR' in line:
+                    if '** ERROR #7 ***' in line:
+                        raise SunDownError('%s: smarts refuses to work when '
+                            'the sun is down.\n%s' %(working.path, line))
+                    else:
+                        raise SMARTSError("%s: smarts no like\n%s" %
+                            (working.path, line))
+
+    @property
+    def spectrum(self):
+        """get the global spectrum for the atmosphere"""
+        output='out.spectrum.txt'
+        self.run()
+
+        with _rtm.Working(self) as working:
             try:
                 smout = working.get(output_file)
             except IOError:
-                raise SMARTSError("didn't get output %s -- %s" %
-                    (output_file, err))
+                raise SMARTSError("%s: didn't get output %s" %
+                    (working.path, output_file))
             try:
-                raw = numpy.genfromtxt(smout, skip_header=output_headers)
+                model_spectrum = numpy.genfromtxt(
+                    smout, skip_header=output_headers, dtype=[
+                        ('wavelength', numpy.float64),
+                        ('direct_normal', numpy.float64),
+                        ('diffuse', numpy.float64),
+                        ('global', numpy.float64),
+                        ('direct', numpy.float64),
+                        ])
             except StopIteration:
-                raise SMARTSError("Couldn't read output -- %s" % err)
-            return numpy.array([raw[:,0]/1000, raw[:,1]*1000])
+                raise SMARTSError("%s: Bad output file for genfromtxt "\
+                    "(%d header rows)" % (working.path, output_headers))
+            model_spectrum['wavelength'] /= 1000
+            model_spectrum['direct_normal'] *= 1000
+            model_spectrum['diffuse'] *= 1000
+            model_spectrum['direct'] *= 1000
+            model_spectrum['global'] *= 1000
+
+        return model_spectrum
+
+    @property
+    def irradiance(self):
+        """Get the integrated irradiance across the spectrum"""
+
+        cols = ('direct_normal', 'diffuse', 'global', 'direct')
+        def get_irrad(col):
+            def irrad():
+                dat = self.spectrum
+                return numpy.trapz(dat[col],dat['wavelength'])
+            return irrad
+        return _rtm.CallableDict({k: get_irrad(k) for k in cols})
 
 
 def cardify(params):
@@ -95,14 +148,22 @@ def cardify(params):
     card_print(2, '4 IH2O mode select')
     
     # Card 5
-    card_print(1, '5 IO3 mode select') # use default ozone FIXME why?
+    card_print(0, '5 IO3 mode select') # use default ozone
+
+    # add 5a and put a default in settings for it
+    card_print('%d %f' % (0, params['AbO3']), 'ozone column')
     
     # Card 6
-    card_print(1, '6 IGAS') # use defaults	
+    card_print(0, '6 IGAS') # specify gasses
+    card_print(0, 'ILOAD')
+    card_print('%f %f %f %f %f %f %f %f %f %f' %
+        tuple(params[gas] for gas in
+            ['ApCH2O', 'ApCh4', 'ApCO', 'ApHNO2', 'ApHNO3', 'ApNO', 'ApNO2',
+            'ApNO3', 'ApO3', 'ApSO2']), 'gasses')
     
     # Card 7
-    card_print(str(params['qCO2']), '7 qCO2 ppm') # FIXME ?!?!??!
-    card_print(0) # FIXME !?!??!
+    card_print(str(params['qCO2']), '7 qCO2 ppm') 
+    card_print(0) # SPECTRUM -- Gueymard 2004 
     
     # Card 8
     card_print('\'USER\'', '8 AEROS')
@@ -110,22 +171,22 @@ def cardify(params):
                                                 params['OMEGL'], params['GG']))
     
     # Card 9
-    card_print(1, '9 ITURB')
-    card_print(str(params['BETA']))
+    card_print(5, '9 ITURB') # read TAU550
+    card_print(str(params['TAU550']))
     
     # Card 10
-    card_print(5, '10 IALBDX')
-    card_print(0)
+    card_print(str(params['IALBDX']), '10 IALBDX')
+    card_print(0) # 10b: no tilted surface
     
     # Card 11
-    card_print('%s %s %s %s' % (params['WLMN'], params['WLMX'], params['SUNCOR'],
-                                                params['SOLARC']), '11 blergh')
+    card_print('%s %s %s %s' % (params['WLMN'], params['WLMX'],
+        params['SUNCOR'], params['SOLARC']), '11 blergh')
     
     # Card 12
     card_print(2, '12 IPRT')
     card_print('%s %s %s' % (params['WPMN'], params['WPMX'], params['INTVL']))
-    card_print('1')
-    card_print('4') # using 4 For integration
+    card_print('4') # NUMBER OF OUTPUT COLUMNS
+    card_print('2 3 4 5') # direct normal, diffuse, global, direct (horizontal)
     
     # Card 13
     card_print(0, '13 ICIRC')
@@ -142,8 +203,8 @@ def cardify(params):
     # Card 17
     card_print(3, '17 IMASS')
     card_print('%s %s %s %s %s %s %s' % (params['YEAR'], params['MONTH'],
-               params['DAY'], params['HOUR'], params['LATIT'], params['LONGIT'],
-               params['ZONE']))
+               params['DAY'], params['HOUR'], params['LATIT'],
+               params['LONGIT'], params['ZONE']))
     
     # Spit out our formatted string.
     card_print('')
@@ -155,30 +216,39 @@ def translate(params):
     p = dict(settings.defaults)
     p.update(params)
     
-    unsupported = ['cloud', 'output']
+    unsupported = ['cloud_altitude', 'cloud_thickness', 'cloud_optical_depth',
+        'nitrogen', 'oxygen', 'ammonia', 'nitrous_oxide']
     
     hard_code = {
-        'HEIGHT': 0, # Card 2 Mode 1
-        'INTVL': 2, # Card 12 Mode 2
-        'ZONE': 0, # Card 17 Mode 3
-        'SUNCOR': 1, # FIXME
+        'HEIGHT': 0, # Card 2 Mode 1 -- height above elevation
+        'ZONE': 0, # Card 17 Mode 3 (datetime is converted to UTC)
+        'SUNCOR': 1, # overwritten anyway (calculated from card 17)
         }
     
     direct = {
         'solar_constant': 'SOLARC',
         'longitude': 'LONGIT',
         'latitude': 'LATIT',
-        'altitude': 'ALTIT',
-        'season': 'SEASON', #TODO
+        'elevation': 'ALTIT',
         'average_daily_temperature': 'TAIR',
         'temperature': 'TDAY',
         'pressure': 'SPR',
         'relative_humidity': 'RH',
         'carbon_dioxide': 'qCO2',
         'single_scattering_albedo': 'OMEGL',
-        'aerosol_optical_depth': 'BETA',
+        'angstroms_coefficient': 'TAU550',
         'aerosol_asymmetry': 'GG',
-        'resolution': 'WLINC',
+        'boundary_layer_ozone': 'AbO3',
+
+        'formaldehyde': 'ApCH2O',
+        'methane': 'ApCh4',
+        'carbon_monoxide': 'ApCO',
+        'nitrous_acid': 'ApHNO2',
+        'nitric_acid': 'ApHNO3',
+        'nitric_oxide': 'ApNO',
+        'nitrogen_dioxide': 'ApNO2',
+        'nitrogen_trioxide': 'ApNO3',
+        'sulphur_dioxide': 'ApSO2',
         }
     
     convert = {
@@ -190,10 +260,16 @@ def translate(params):
                 'YEAR': tt.tm_year,
                 'MONTH': tt.tm_mon,
                 'DAY': tt.tm_mday,
-                'HOUR': tt.tm_hour + tt.tm_min/60. + tt.tm_sec/3600,
+                'HOUR': tt.tm_hour + tt.tm_min/60.0 + tt.tm_sec/3600.0,
                 })(v.utctimetuple())
-            ), 
-        'surface': ((), lambda v: {
+            ),
+        'season': ((), lambda v: {
+            'SEASON': {
+                'winter': 'WINTER',
+                'summer': 'SUMMER',
+                }[v]
+            }),
+        'surface_type': ((), lambda v: {
             'IALBDX': {
                 'snow': 3,
                 'clear water': 2,
@@ -218,14 +294,20 @@ def translate(params):
             'ALPHA1': v,
             'ALPHA2': v,
             }),
+        'tropospheric_ozone': ((), lambda v: {
+            'ApO3': v*10, # atm-cm -> ppmv
+            }),
         'lower_limit': ((), lambda v: {
-            'WLMN': v*1000,
-            'WPMN': v*1000,
+            'WLMN': v*1000, # um -> nm
+            'WPMN': v*1000, # um -> nm
             }),
         'upper_limit': ((), lambda v: {
-            'WLMX': v*1000,
-            'WPMX': v*1000,
+            'WLMX': v*1000, # um -> nm
+            'WPMX': v*1000, # um -> nm
             }),
+        'resolution': ((), lambda v: {
+            'INTVL': v*1000, # um -> nm
+            })
         }
     
     processed = []
@@ -249,20 +331,4 @@ def translate(params):
             addItem(param,val)
     
     return translated
-
-"""
-G is irradiance
-
-AM is clear sky
-Kt is cloudy
-
-
-(first derivative)Gt is the irradiation
-Kt is clearness, from book
-
-"""
-
-
-
-
 
