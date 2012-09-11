@@ -28,7 +28,7 @@ from setuptools.command.install import install as DistutilsInstall
 
 setup(
     name='RTM',
-    version='0.2',
+    version='0.2.1',
     author='Philip Schleihauf',
     author_email='uniphil@gmail.com',
     license='license.txt', #????
@@ -38,10 +38,10 @@ setup(
     packages=['rtm'],
     #package_data={'':['*.dat', '*.DAT']},
     include_package_data=True,
-    scripts=[
-        'bin/sbdart/sbdart',
-        'bin/smarts/smarts295',
-        ],
+    #scripts=[
+    #    'bin/sbdart/sbdart',
+    #    'bin/smarts/smarts295',
+    #    ],
     
     #install_requires=['numpy'],
     )
