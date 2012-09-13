@@ -78,7 +78,7 @@ defaults = {
 }
 
 
-polution = {
+pollution = {
     # recommended by SMARTS
     'pristine': {
         'formaldehyde': -0.003,
