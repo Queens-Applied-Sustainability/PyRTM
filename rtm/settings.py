@@ -92,7 +92,7 @@ polution = {
         'tropospheric_ozone': -0.007,
         'sulphur_dioxide': 0,
         },
-    'light_polution': {
+    'light_pollution': {
         'formaldehyde': 0.001,
         'methane': 0.2,
         'carbon_monoxide': 0,
