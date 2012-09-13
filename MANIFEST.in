@@ -1,4 +1,4 @@
-include README.txt
+include README.md
 include license.txt
 recursive-include bin *
 recursive-include rtm/data *

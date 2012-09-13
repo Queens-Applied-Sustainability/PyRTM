@@ -28,7 +28,7 @@ from setuptools.command.install import install as DistutilsInstall
 
 setup(
     name='RTM',
-    version='0.2.2',
+    version='0.2.3',
     author='Philip Schleihauf',
     author_email='uniphil@gmail.com',
     license='license.txt',
