@@ -23,8 +23,8 @@ def incident_radiation(time, lat, lng):
     B = (standard_time.timetuple().tm_yday - 1) * 360.0 / 365.0
     E = 229.2 * (0.000075 + 0.001868 * dcos(B) - 0.032077 * dsin(B) -
                  0.014615 * dcos(2*B) - 0.04089 * dsin(2*B))
-    standard_meridian = int(((lng + 360) % 360) / 15) * 15
-    minutes_off = 4*(standard_meridian - lng) + E
+    standard_meridian = int((((360 - lng) + 360) % 360) / 15) * 15
+    minutes_off = 4*(standard_meridian - (360 - lng)) + E
     solar_time = standard_time + datetime.timedelta(seconds=minutes_off*60)
     
     tt = solar_time.timetuple()
