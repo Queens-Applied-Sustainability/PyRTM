@@ -23,5 +23,7 @@
 
 
 import settings
-from sbdart import SBdart
-from smarts import SMARTS
+from sbdart import SBdart, SBdartError
+from smarts import SMARTS, SMARTSError, SunDownError
+from _rtm import RTMError
+from fmm import BadBoundsError

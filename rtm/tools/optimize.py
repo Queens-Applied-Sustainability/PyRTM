@@ -39,7 +39,7 @@ class Optimizer(object):
     """
     
     def __init__(self, parameter, bounds, tolerance,
-        irradiance='global_horizontal'):
+        irradiance='global'):
         """
         parameter: a model config setting that the particular rtm supports.
         bounds: a two-elemnt tuple defining some x which bound the solution.
