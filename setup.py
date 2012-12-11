@@ -28,15 +28,15 @@ from setuptools.command.install import install as DistutilsInstall
 
 setup(
     name='RTM',
-    version='0.2.4',
+    version='0.2.6',
     author='Philip Schleihauf',
     author_email='uniphil@gmail.com',
     license='license.txt',
     description='Numerical Computations for Radiative Transfer Modelling',
     long_description=open('README.md').read(),
-    packages=['rtm'],
+    packages=['rtm', 'rtm.tools'],
     include_package_data=True,
-    install_requires=['numpy', 'FMM'],
+    #install_requires=['numpy', 'FMM'],
     )
     
     
