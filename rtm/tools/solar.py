@@ -10,7 +10,7 @@ SOLAR_CONST = 1367 # W/m^2
 def dcos(d): return cos(d * pi / 180.) # cos and sin in degrees
 def dsin(d): return sin(d * pi / 180.)
 
-def incident_radiation(time, lat, lng):
+def extraterrestrial_radiation(time, lat, lng):
     """Given a datetime object, latitude, longitude, return the solar
     incident radiation at that moment. So basically what the sun intensity
     is on a plane in space that's parallel to the surface of the earth at
@@ -41,3 +41,9 @@ def incident_radiation(time, lat, lng):
     G0 = SOLAR_CONST * fact
     
     return G0
+
+# DEPRECTATED FUNCTION NAME
+# incident_radiation will be removed soon
+def incident_radiation(*args, **kwargs):
+    print("WARNING: this function is deprecated, please use extraterrestrial_radiation instead.")
+    return extraterrestrial_radiation(*args, **kwargs)
