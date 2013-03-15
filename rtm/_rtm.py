@@ -140,7 +140,9 @@ class Working(object):
         if file_name in self.state.get('writes', []):
             return
         else:
-            open(os.path.join(self.path, file_name), 'w').write(content)
+            file_path = os.path.join(self.path, file_name)
+            with open(file_path, 'w') as to_write:
+                to_write.write(content)
 
         if not self.state.get('writes'):
             self.state['writes'] = [file_name]
@@ -163,7 +165,8 @@ class Working(object):
         picklepath = os.path.join(self.path, picklename)
 
         try:
-            run_out = pickle.load(open(picklepath, 'rb'))
+            with open(picklepath, 'rb') as pfile:
+                run_out = pickle.load(pfile)
             self.state['outfile'][cmd] = run_out
             return run_out
         except IOError:
@@ -173,7 +176,8 @@ class Working(object):
         cmd += ' 2> %s' % errfile
         p = subprocess.Popen(cmd, cwd=self.path, shell=True)
         p.wait()
-        err = open(os.path.join(self.path, errfile)).read()
+        with open(os.path.join(self.path, errfile)) as errfile:
+            err = errfile.read()
         run_out = [p.returncode, err, self.model]
         self.state['outfile'][cmd] = run_out
 

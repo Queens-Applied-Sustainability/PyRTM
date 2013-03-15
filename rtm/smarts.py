@@ -140,9 +140,13 @@ def cardify(params):
     card_print('%s %s %s' % (params['SPR'], params['ALTIT'], params['HEIGHT']))
     
     # CARD 3
-    card_print(0, '3 IATMOS mode select')
-    card_print('%s %s \'%s\' %s' % (params['TAIR'], params['RH'],
+    card_print(params['IATMOS'], '3 IATMOS mode select')
+    if params['IATMOS'] == 0:
+        card_print('%s %s \'%s\' %s' % (params['TAIR'], params['RH'],
                                     params['SEASON'], params['TDAY']))
+    else:
+        assert params['IATMOS'] == 1, 'bad smarts IATMOS (not 0 or 1)'
+        card_print('\'%s\'' % params['ATMOS'])
     
     # Card 4
     card_print(2, '4 IH2O mode select')
@@ -224,7 +228,7 @@ def translate(params):
         'ZONE': 0, # Card 17 Mode 3 (datetime is converted to UTC)
         'SUNCOR': 1, # overwritten anyway (calculated from card 17)
         }
-    
+
     direct = {
         'solar_constant': 'SOLARC',
         'longitude': 'LONGIT',
@@ -307,7 +311,10 @@ def translate(params):
             }),
         'resolution': ((), lambda v: {
             'INTVL': v*1000, # um -> nm
-            })
+            }),
+        'smarts_use_standard_atmos': ((), lambda v: {
+            'IATMOS': (1 if v is True else 0),
+            }),
         }
     
     processed = []
