@@ -149,22 +149,32 @@ def cardify(params):
         card_print('\'%s\'' % params['ATMOS'])
     
     # Card 4
-    card_print(2, '4 IH2O mode select')
-    
+    if params['IATMOS'] == 0:
+        card_print(2, '4 IH2O mode select')
+    else:
+        assert params['IATMOS'] == 1, 'bad smarts IATMOS (not 0 or 1)'
+        card_print(1, '4 IH2O mode select')
     # Card 5
-    card_print(0, '5 IO3 mode select') # use default ozone
+    if params['IATMOS'] == 0:
+        card_print(0, '5 IO3 mode select') 
+        card_print('%d %f' % (0, params['AbO3']), 'ozone column')     # add 5a and put a default in settings for it
+    else:
+        assert params['IATMOS'] == 1, 'bad smarts IATMOS (not 0 or 1)'
+        card_print(1, '5 IO3 mode select') # use default ozone
 
-    # add 5a and put a default in settings for it
-    card_print('%d %f' % (0, params['AbO3']), 'ozone column')
+    
     
     # Card 6
-    card_print(0, '6 IGAS') # specify gasses
-    card_print(0, 'ILOAD')
-    card_print('%f %f %f %f %f %f %f %f %f %f' %
-        tuple(params[gas] for gas in
-            ['ApCH2O', 'ApCh4', 'ApCO', 'ApHNO2', 'ApHNO3', 'ApNO', 'ApNO2',
-            'ApNO3', 'ApO3', 'ApSO2']), 'gasses')
-    
+    if params['IATMOS'] == 0:
+        card_print(0, '6 IGAS') # specify gasses
+        card_print(0, 'ILOAD')
+        card_print('%f %f %f %f %f %f %f %f %f %f' %
+            tuple(params[gas] for gas in
+                ['ApCH2O', 'ApCh4', 'ApCO', 'ApHNO2', 'ApHNO3', 'ApNO', 'ApNO2',
+                 'ApNO3', 'ApO3', 'ApSO2']), 'gasses')
+    else:
+        assert params['IATMOS'] == 1, 'bad smarts IATMOS (not 0 or 1)'
+        card_print(1, '6 IGAS') # specify gasses
     # Card 7
     card_print(str(params['qCO2']), '7 qCO2 ppm') 
     card_print(0) # SPECTRUM -- Gueymard 2004 
