@@ -70,6 +70,9 @@ defaults = {
     'cloud_altitude': 2, # km bottom of cloud ... suggested by QIW
     'cloud_thickness': 1, # km
     'cloud_optical_depth': 0, # optical depth at 0.55 um
+    
+    # SMARTS special
+    'smarts_use_standard_atmos': True,
 
     # spectral settings
     'lower_limit': 0.28, # um
